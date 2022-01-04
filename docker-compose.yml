@@ -1,0 +1,30 @@
+version: '3'
+
+networks:
+    konnex-net:
+      driver: bridge
+
+services: 
+    things-db:
+        image: mysql
+        ports: 
+            - "3306:3306"
+        environment: 
+            - MYSQL_ROOT_PASSWORD=konnexthings
+            - MYSQL_DATABASE=thingsdb
+            - MYSQL_ROOT_HOST=%
+        networks: 
+            - konnex-net
+
+    things:
+        build: 
+            context: .
+            dockerfile: ./Dockerfile
+            args: 
+                SERVICE: things
+        ports: 
+            - 8080:8080
+        depends_on:
+            - things-db
+        networks: 
+            - konnex-net
