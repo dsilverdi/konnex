@@ -1,7 +1,6 @@
 package sqldb
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -32,8 +31,6 @@ func Connect(cfg Config) (*sqlx.DB, error) {
 	var err error
 	url := cfg.User + ":" + cfg.Pass + "@tcp(" + "things-db" + ":" + cfg.Port + ")/" + cfg.Name + "?parseTime=true&clientFoundRows=true"
 
-	fmt.Println(url)
-
 	for {
 		db, err = sqlx.Connect("mysql", url)
 		if err == nil {
@@ -58,6 +55,42 @@ func Connect(cfg Config) (*sqlx.DB, error) {
 func migrateDB(db *sqlx.DB) error {
 	migrations := &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
+			{
+				Id: "things_1",
+				Up: []string{
+					`CREATE TABLE IF NOT EXISTS things (
+						id       	VARCHAR(255),
+						owner    	VARCHAR(255) NOT NULL,
+						channel_id	VARCHAR(255), 
+						name     	VARCHAR(255) NOT NULL,
+						metadata 	TEXT,
+						PRIMARY KEY (id)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
+
+					`CREATE TABLE IF NOT EXISTS channels (
+						id       VARCHAR(255),
+						owner    VARCHAR(255) NOT NULL,
+						name     VARCHAR(255) NOT NULL,
+						type	 VARCHAR(255) NOT NULL,
+						metadata TEXT,
+						PRIMARY KEY (id)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
+
+					`CREATE TABLE IF NOT EXISTS connections (
+						id	VARCHAR(255) NOT NULL,
+						channel_id    VARCHAR(255),
+						thing_id      VARCHAR(255),
+						protocol	  VARCHAR(255),
+						status		  VARCHAR(255),
+						PRIMARY KEY (id)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
+				},
+				Down: []string{
+					"DROP TABLE connections",
+					"DROP TABLE things",
+					"DROP TABLE channels",
+				},
+			},
 			//{
 			// 	Id: "things_1",
 			// 	Up: []string{

@@ -19,47 +19,109 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
 
-	// POST    /things/                          adds things
-	// GET     /things/:id                       retrieves the given things by id
-	// PUT     /things/:id                       post updated things information about the things
-	// PATCH   /things/:id                       partial updated things information
-	// DELETE  /things/:id                       remove the given things
-	// GET     /things/:id/addresses/            retrieve addresses associated with the things
-	// GET     /things/:id/addresses/:addressID  retrieve a particular things address
-	// POST    /things/:id/addresses/            add a new address
-	// DELETE  /things/:id/addresses/:addressID  remove an address
+	// POST    	/things/                         create things
+	// GET	   	/things/						 get list of things
+	// GET     	/things/:id                      retrieves the given things by id
+	// PUT     	/things/:id                      post updated things information about the things
+	// PATCH   	/things/:id                      partial updated things information
+	// DELETE  	/things/:id                      remove the given things
 
-	r.Methods("POST").Path("/things/").Handler(httptransport.NewServer(
-		e.AddThingsEndpoint,
-		decodeAddThingsRequest,
-		encodeResponse,
-		opt...,
-	))
+	// POST		/channel/						 create channel
+	// GET		/channel/						 get list of channel
+	// GET		/channel/:id					 get specific channel
+	// DELETE	/channel/:id					 delete channel
+	//
 
-	r.Methods("GET").Path("/things/").Handler(httptransport.NewServer(
+	r.Methods("GET").Path("/things").Handler(httptransport.NewServer(
 		e.GetThingsEndpoint,
 		decodeGetThingsRequest,
 		encodeResponse,
 		opt...,
 	))
 
+	// r.Methods("GET").Path("/things/{thingsID}").Handler(httptransport.NewServer(
+
+	// ))
+
+	r.Methods("POST").Path("/things/").Handler(httptransport.NewServer(
+		e.CreateThingEndpoint,
+		decodeCreateThingsRequest,
+		encodeResponse,
+		opt...,
+	))
+
+	// Channel Functionality Route
+
+	r.Methods("GET").Path("/channel").Handler(httptransport.NewServer(
+		e.GetChannelEndpoint,
+		decodeGetChannelEndpoint,
+		encodeResponse,
+		opt...,
+	))
+
+	// r.Methods("GET").Path("/channel/{channelID}").Handler(httptransport.NewServer(
+
+	// ))
+
+	r.Methods("POST").Path("/channel/").Handler(httptransport.NewServer(
+		e.CreateChannelEndpoint,
+		decodeCreateChannelRequest,
+		encodeResponse,
+		opt...,
+	))
+
+	// Connection Functionality Route
+
+	// r.Methods("GET").Path("/connection").Handler(httptransport.NewServer(
+
+	// ))
+
+	// r.Methods("GET").Path("/connection/{channelID}").Handler(httptransport.NewServer(
+
+	// ))
+
+	// r.Methods("GET").Path("/connection/{channelID}/{thingID}").Handler(httptransport.NewServer(
+
+	// ))
+
+	// r.Methods("PUT").Path("/connect/").Handler(httptransport.NewServer(
+
+	// ))
+
+	// r.Methods("PUT").Path("/disconnect/").Handler(httptransport.NewServer(
+
+	// ))
+
 	return r
 }
 
-func decodeAddThingsRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req things.PostThingsRequest
-	if e := json.NewDecoder(r.Body).Decode(&req.Things); e != nil {
+func decodeCreateThingsRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req createThingsReq
+	if e := json.NewDecoder(r.Body).Decode(&req); e != nil {
 		return nil, e
 	}
 	return req, nil
 }
 
 func decodeGetThingsRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
-	var req things.PostThingsRequest
-	if e := json.NewDecoder(r.Body).Decode(&req.Things); e != nil {
+	channelID := r.URL.Query().Get("channel_id")
+	return getThingsReq{channelID: channelID}, nil
+}
+
+func decodeCreateChannelRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req createChannelReq
+
+	if e := json.NewDecoder(r.Body).Decode(&req); e != nil {
 		return nil, e
 	}
 	return req, nil
+}
+
+func decodeGetChannelEndpoint(_ context.Context, r *http.Request) (request interface{}, err error) {
+
+	Type := r.URL.Query().Get("type")
+
+	return getChannelReq{Type: Type}, nil
 }
 
 type errorer interface {
@@ -84,6 +146,7 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 // encodeRequest likewise JSON-encodes the request to the HTTP request body.
 // Don't use it directly as a transport/http.Client EncodeRequestFunc:
 // profilesvc endpoints require mutating the HTTP method and request path.
+
 // func encodeRequest(_ context.Context, req *http.Request, request interface{}) error {
 // 	var buf bytes.Buffer
 // 	err := json.NewEncoder(&buf).Encode(request)

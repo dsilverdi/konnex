@@ -15,7 +15,7 @@ type database struct {
 type Database interface {
 	NamedExecContext(context.Context, string, interface{}) (sql.Result, error)
 	QueryRowxContext(context.Context, string, ...interface{}) *sqlx.Row
-	NamedQueryContext(context.Context, string, interface{}) (*sqlx.Rows, error)
+	QueryxContext(context.Context, string, ...interface{}) (*sqlx.Rows, error)
 	GetContext(context.Context, interface{}, string, ...interface{}) error
 }
 
@@ -34,8 +34,8 @@ func (dm database) QueryRowxContext(ctx context.Context, query string, args ...i
 	return dm.db.QueryRowxContext(ctx, query, args...)
 }
 
-func (dm database) NamedQueryContext(ctx context.Context, query string, args interface{}) (*sqlx.Rows, error) {
-	return dm.db.NamedQueryContext(ctx, query, args)
+func (dm database) QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error) {
+	return dm.db.QueryxContext(ctx, query, args...)
 }
 
 func (dm database) GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error {

@@ -11,6 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"konnex/pkg/uuid"
+
 	"github.com/go-kit/log"
 	"github.com/jmoiron/sqlx"
 )
@@ -96,8 +98,12 @@ func connectDB(cfg SysConfig) *sqlx.DB {
 
 func NewService(db *sqlx.DB) things.Service {
 	database := sqldb.NewDatabase(db)
+
 	ThingsRepository := sqldb.NewThingRepository(database)
 
-	svc := things.New(ThingsRepository)
+	ChannelRepository := sqldb.NewChannelRepository(database)
+
+	IDProvider := uuid.New()
+	svc := things.New(ThingsRepository, ChannelRepository, IDProvider)
 	return svc
 }
