@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"konnex/things"
 	"net/http"
 
@@ -10,6 +11,12 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
 	"github.com/gorilla/mux"
+)
+
+var (
+	// ErrBadRouting is returned when an expected path variable is missing.
+	// It always indicates programmer error.
+	ErrBadRouting = errors.New("inconsistent mapping between route and handler ")
 )
 
 func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
@@ -22,15 +29,15 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 	// POST    	/things/                         create things
 	// GET	   	/things/						 get list of things
 	// GET     	/things/:id                      retrieves the given things by id
-	// PUT     	/things/:id                      post updated things information about the things
-	// PATCH   	/things/:id                      partial updated things information
 	// DELETE  	/things/:id                      remove the given things
 
 	// POST		/channel/						 create channel
 	// GET		/channel/						 get list of channel
 	// GET		/channel/:id					 get specific channel
 	// DELETE	/channel/:id					 delete channel
-	//
+
+	// Things Functionality Route
+	// Things Define the Device / Sensor Data / IoT Node that client want to Observe
 
 	r.Methods("GET").Path("/things").Handler(httptransport.NewServer(
 		e.GetThingsEndpoint,
@@ -39,10 +46,6 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
-	// r.Methods("GET").Path("/things/{thingsID}").Handler(httptransport.NewServer(
-
-	// ))
-
 	r.Methods("POST").Path("/things/").Handler(httptransport.NewServer(
 		e.CreateThingEndpoint,
 		decodeCreateThingsRequest,
@@ -50,7 +53,23 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
+	r.Methods("GET").Path("/things/{id}").Handler(httptransport.NewServer(
+		e.GetSpecificThingsEndpoint,
+		decodeGetSpecific,
+		encodeResponse,
+		opt...,
+	))
+
+	r.Methods("DELETE").Path("/things/{id}").Handler(httptransport.NewServer(
+		e.DeleteThingEndpoint,
+		decodeGetSpecific,
+		encodeResponse,
+		opt...,
+	))
+
 	// Channel Functionality Route
+	// Channel Define Group of Connectivity that client want to Observe
+	// e.g MQTT, OPCUA, HTTP, etc..
 
 	r.Methods("GET").Path("/channel").Handler(httptransport.NewServer(
 		e.GetChannelEndpoint,
@@ -59,9 +78,12 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
-	// r.Methods("GET").Path("/channel/{channelID}").Handler(httptransport.NewServer(
-
-	// ))
+	r.Methods("GET").Path("/channel/{id}").Handler(httptransport.NewServer(
+		e.GetSpecificChannelEndpoint,
+		decodeGetSpecific,
+		encodeResponse,
+		opt...,
+	))
 
 	r.Methods("POST").Path("/channel/").Handler(httptransport.NewServer(
 		e.CreateChannelEndpoint,
@@ -70,25 +92,20 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
+	r.Methods("DELETE").Path("/channel/{id}").Handler(httptransport.NewServer(
+		e.DeleteChannelEndpoint,
+		decodeGetSpecific,
+		encodeResponse,
+		opt...,
+	))
+
 	// Connection Functionality Route
 
-	// r.Methods("GET").Path("/connection").Handler(httptransport.NewServer(
+	// r.Methods("PATCH").Path("/connect/{id}").Handler(httptransport.NewServer(
 
 	// ))
 
-	// r.Methods("GET").Path("/connection/{channelID}").Handler(httptransport.NewServer(
-
-	// ))
-
-	// r.Methods("GET").Path("/connection/{channelID}/{thingID}").Handler(httptransport.NewServer(
-
-	// ))
-
-	// r.Methods("PUT").Path("/connect/").Handler(httptransport.NewServer(
-
-	// ))
-
-	// r.Methods("PUT").Path("/disconnect/").Handler(httptransport.NewServer(
+	// r.Methods("PATCH").Path("/disconnect/{id}").Handler(httptransport.NewServer(
 
 	// ))
 
@@ -122,6 +139,15 @@ func decodeGetChannelEndpoint(_ context.Context, r *http.Request) (request inter
 	Type := r.URL.Query().Get("type")
 
 	return getChannelReq{Type: Type}, nil
+}
+
+func decodeGetSpecific(_ context.Context, r *http.Request) (request interface{}, err error) {
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		return nil, ErrBadRouting
+	}
+	return getSpecificReq{ID: id}, nil
 }
 
 type errorer interface {

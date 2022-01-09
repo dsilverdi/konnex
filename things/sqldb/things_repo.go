@@ -69,6 +69,40 @@ func (t ThingRepository) GetAll(ctx context.Context) ([]things.Things, error) {
 	return thingsList, nil
 }
 
+func (t ThingRepository) GetSpecific(ctx context.Context, ID string) (*things.Things, error) {
+	var Thing things.Things
+	var thingDB ThingDB
+
+	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE id = ?`
+
+	err := t.db.QueryRowxContext(ctx, query, ID).StructScan(&thingDB)
+	if err != nil {
+		return nil, err
+	}
+
+	Thing, err = toThing(thingDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Thing, nil
+}
+
+func (t ThingRepository) Delete(ctx context.Context, id string) error {
+	dbTh := ThingDB{
+		ID: id,
+	}
+
+	query := `DELETE FROM things WHERE id = :id`
+
+	_, err := t.db.NamedExecContext(ctx, query, dbTh)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func toDBThing(th things.Things) (ThingDB, error) {
 	var data string
 	if len(th.MetaData) > 0 {

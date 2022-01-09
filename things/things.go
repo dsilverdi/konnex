@@ -2,7 +2,6 @@ package things
 
 import (
 	"context"
-	"errors"
 )
 
 type Things struct {
@@ -16,12 +15,6 @@ type Things struct {
 type ThingRepository interface {
 	Insert(ctx context.Context, things Things) error
 	GetAll(ctx context.Context) ([]Things, error)
+	GetSpecific(ctx context.Context, id string) (*Things, error)
+	Delete(ctx context.Context, id string) error
 }
-
-//JSON Format Struct
-
-var (
-	ErrInconsistentIDs = errors.New("inconsistent IDs")
-	ErrAlreadyExists   = errors.New("already exists")
-	ErrNotFound        = errors.New("not found")
-)

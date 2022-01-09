@@ -68,6 +68,40 @@ func (ch ChannelRepository) GetAll(ctx context.Context) ([]things.Channel, error
 	return channelList, nil
 }
 
+func (ch ChannelRepository) GetSpecific(ctx context.Context, ID string) (*things.Channel, error) {
+	var Channel things.Channel
+	var channelDB ChannelDB
+
+	query := `SELECT id, owner, name, type, metadata FROM channels WHERE id = ?`
+
+	err := ch.db.QueryRowxContext(ctx, query, ID).StructScan(&channelDB)
+	if err != nil {
+		return nil, err
+	}
+
+	Channel, err = toChannel(channelDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Channel, nil
+}
+
+func (ch ChannelRepository) Delete(ctx context.Context, id string) error {
+	dbCh := ChannelDB{
+		ID: id,
+	}
+
+	query := `DELETE FROM channels WHERE id = :id`
+
+	_, err := ch.db.NamedExecContext(ctx, query, dbCh)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func toDBChannel(ch things.Channel) (ChannelDB, error) {
 	var data string
 	if len(ch.Metadata) > 0 {

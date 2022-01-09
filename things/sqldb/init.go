@@ -75,18 +75,8 @@ func migrateDB(db *sqlx.DB) error {
 						metadata TEXT,
 						PRIMARY KEY (id)
 					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
-
-					`CREATE TABLE IF NOT EXISTS connections (
-						id	VARCHAR(255) NOT NULL,
-						channel_id    VARCHAR(255),
-						thing_id      VARCHAR(255),
-						protocol	  VARCHAR(255),
-						status		  VARCHAR(255),
-						PRIMARY KEY (id)
-					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
 				},
 				Down: []string{
-					"DROP TABLE connections",
 					"DROP TABLE things",
 					"DROP TABLE channels",
 				},
