@@ -2,7 +2,7 @@ version: '3'
 
 networks:
     konnex-net:
-      driver: bridge
+        driver: bridge
 
 services: 
     things-db:
@@ -16,7 +16,7 @@ services:
         networks: 
             - konnex-net
 
-    things:
+    konnex-things:
         build: 
             context: .
             dockerfile: ./Dockerfile
@@ -26,5 +26,16 @@ services:
             - 8080:8080
         depends_on:
             - things-db
+        networks: 
+            - konnex-net
+    
+    konnex-opcua:
+        build: 
+            context: .
+            dockerfile: ./Dockerfile
+            args: 
+                SERVICE: opcua
+        ports: 
+            - 8082:8082
         networks: 
             - konnex-net

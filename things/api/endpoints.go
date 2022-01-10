@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"konnex/pkg/rest"
 	"konnex/things"
 	"net/http"
 
@@ -48,7 +49,7 @@ func CreateThingsEndpoint(svc things.Service) endpoint.Endpoint {
 
 		th, e := svc.CreateThings(ctx, data)
 		if e != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Create Things Error",
@@ -56,7 +57,7 @@ func CreateThingsEndpoint(svc things.Service) endpoint.Endpoint {
 			}, e
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "OK",
 			Message: "Create Things Success",
@@ -74,7 +75,7 @@ func GetThingsEndpoint(svc things.Service) endpoint.Endpoint {
 
 		things, err = svc.GetThings(ctx)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Get Things Error",
@@ -82,7 +83,7 @@ func GetThingsEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "OK",
 			Message: "Get List of Things",
@@ -97,7 +98,7 @@ func GetSpecificThingsEndpoint(svc things.Service) endpoint.Endpoint {
 
 		things, err := svc.GetSpecificThing(ctx, req.ID)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Get Things Error",
@@ -105,7 +106,7 @@ func GetSpecificThingsEndpoint(svc things.Service) endpoint.Endpoint {
 			}, nil
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "OK",
 			Message: "Get Specific Thing",
@@ -119,7 +120,7 @@ func DeleteThingEndpoint(svc things.Service) endpoint.Endpoint {
 		req := request.(getSpecificReq)
 
 		if req.ID == "" {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusBadRequest,
 				Status:  "No ID provided",
 				Message: "Delete Things Error",
@@ -128,7 +129,7 @@ func DeleteThingEndpoint(svc things.Service) endpoint.Endpoint {
 
 		err = svc.DeleteThing(ctx, req.ID)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Delete Things Error",
@@ -136,7 +137,7 @@ func DeleteThingEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "OK",
 			Message: "Success Delete Thing",
@@ -159,7 +160,7 @@ func CreateChannelEndpoint(svc things.Service) endpoint.Endpoint {
 
 		ch, err := svc.CreateChannel(ctx, data)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Create Channel Error",
@@ -167,7 +168,7 @@ func CreateChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "Success",
 			Message: "Create Channel Success",
@@ -185,7 +186,7 @@ func GetChannelEndpoint(svc things.Service) endpoint.Endpoint {
 
 		channels, err = svc.GetChannels(ctx)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Get Channel Error",
@@ -193,7 +194,7 @@ func GetChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "Success",
 			Message: "Get Channel Success",
@@ -208,7 +209,7 @@ func GetSpecificChannelEndpoint(svc things.Service) endpoint.Endpoint {
 
 		ch, err := svc.GetSpecificChannel(ctx, req.ID)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Create Channel Error",
@@ -216,7 +217,7 @@ func GetSpecificChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			}, nil
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "Success",
 			Message: "Get Channel Success",
@@ -230,7 +231,7 @@ func DeleteChannelEndpoint(svc things.Service) endpoint.Endpoint {
 		req := request.(getSpecificReq)
 
 		if req.ID == "" {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusBadRequest,
 				Status:  "No ID provided",
 				Message: "Delete Channel Error",
@@ -239,7 +240,7 @@ func DeleteChannelEndpoint(svc things.Service) endpoint.Endpoint {
 
 		err = svc.DeleteChannel(ctx, req.ID)
 		if err != nil {
-			return HTTPResponse{
+			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
 				Status:  "Error",
 				Message: "Delete Channel Error",
@@ -247,7 +248,7 @@ func DeleteChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		return HTTPResponse{
+		return rest.HTTPResponse{
 			Code:    http.StatusOK,
 			Status:  "OK",
 			Message: "Success Delete Channel",
