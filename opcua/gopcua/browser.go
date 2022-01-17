@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"konnex/opcua"
 	"konnex/pkg/errors"
+	"sync"
 
 	opcuapkg "github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/id"
@@ -53,10 +54,31 @@ func (b Browser) Browse(serveruri string, nodeid string) ([]opcua.BrowsedNode, e
 	}
 	defer uaClient.Close()
 
-	nodes, err := browse(uaClient, nodeid, "", 0)
-	if err != nil {
-		return nil, err
+	// nodes, err := browse(uaClient, nodeid, "", 0)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	nodeCh := make(chan Node)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go browse(uaClient, nodeid, "", 0, nodeCh, &wg)
+
+	go func() {
+		wg.Wait()
+		close(nodeCh)
+		fmt.Println("------- CLOSE NOW --------")
+	}()
+
+	var nodes []Node
+	count := 0
+	fmt.Println("--------- running read channel ---------")
+	for ch := range nodeCh {
+		count += 1
+		nodes = append(nodes, ch)
 	}
+
+	fmt.Println("NODE SIZE | ", count)
 
 	for _, n := range nodes {
 		node := opcua.BrowsedNode{
@@ -73,9 +95,12 @@ func (b Browser) Browse(serveruri string, nodeid string) ([]opcua.BrowsedNode, e
 	return nodelist, nil
 }
 
-func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node, error) {
+func browse(cl *opcuapkg.Client, NodeID string, path string, level int, ch chan Node, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	if level > MaxChildren {
-		return nil, nil
+		// fmt.Println("max children")
+		return
 	}
 
 	log := fmt.Sprintf("%s at %d", NodeID, level)
@@ -83,7 +108,7 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node,
 
 	nid, err := ua.ParseNodeID(NodeID)
 	if err != nil {
-		return []Node{}, nil
+		return
 	}
 
 	n := cl.Node(nid)
@@ -96,25 +121,24 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node,
 		ua.AttributeIDDataType,
 	)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	nodeDef := Node{
-		NodeID: nid,
-	}
+	nodeDef := new(Node)
+	nodeDef.NodeID = nid
 
 	switch err := attrs[0].Status; err {
 	case ua.StatusOK:
 		nodeDef.NodeClass = ua.NodeClass(attrs[0].Value.Int())
 	default:
-		return nil, err
+		return
 	}
 
 	switch err := attrs[1].Status; err {
 	case ua.StatusOK:
 		nodeDef.BrowseName = attrs[1].Value.String()
 	default:
-		return nil, err
+		return
 	}
 
 	switch err := attrs[2].Status; err {
@@ -123,7 +147,7 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node,
 	case ua.StatusBadAttributeIDInvalid:
 		//pass
 	default:
-		return nil, err
+		return
 	}
 
 	switch err := attrs[3].Status; err {
@@ -133,7 +157,7 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node,
 	case ua.StatusBadAttributeIDInvalid:
 		// ignore
 	default:
-		return nil, err
+		return
 	}
 
 	switch err := attrs[4].Status; err {
@@ -169,54 +193,42 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int) ([]Node,
 	case ua.StatusBadAttributeIDInvalid:
 		// ignore
 	default:
-		return nil, err
+		return
 	}
 
 	nodeDef.Path = join(path, nodeDef.BrowseName)
 
-	var nodes []Node
 	if nodeDef.NodeClass == ua.NodeClassVariable {
-		nodes = append(nodes, nodeDef)
+		ch <- *nodeDef
+		fmt.Println("----------- SEND TO CHANNEL ----------")
 	}
 
-	ch, err := browsChildren(cl, n, path, level, id.HasComponent)
-	if err != nil {
-		return nil, err
-	}
-	nodes = append(nodes, ch...)
+	// ch <- *nodeDef
 
-	ch, err = browsChildren(cl, n, path, level, id.Organizes)
-	if err != nil {
-		return nil, err
-	}
-	nodes = append(nodes, ch...)
+	browseChildren(cl, n, path, level, id.HasComponent, ch, wg)
+	browseChildren(cl, n, path, level, id.Organizes, ch, wg)
+	browseChildren(cl, n, path, level, id.HasProperty, ch, wg)
 
-	ch, err = browsChildren(cl, n, path, level, id.HasProperty)
-	if err != nil {
-		return nil, err
-	}
-	nodes = append(nodes, ch...)
+	// wg.Add(1)
+	// go browsChildren(cl, n, path, level, id.HasComponent, ch, wg)
 
-	return nodes, nil
+	// wg.Add(1)
+	// go browsChildren(cl, n, path, level, id.Organizes, ch, wg)
+
+	// wg.Add(1)
+	// go browsChildren(cl, n, path, level, id.HasProperty, ch, wg)
 }
 
-func browsChildren(cl *opcuapkg.Client, node *opcuapkg.Node, path string, level int, refID uint32) ([]Node, error) {
-	var nodes []Node
-
+func browseChildren(cl *opcuapkg.Client, node *opcuapkg.Node, path string, level int, refID uint32, ch chan Node, wg *sync.WaitGroup) {
 	refs, err := node.ReferencedNodes(refID, ua.BrowseDirectionForward, ua.NodeClassAll, true)
 	if err != nil {
-		return []Node{}, err
+		return
 	}
 
 	for _, r := range refs {
-		children, err := browse(cl, r.ID.String(), path, level+1)
-		if err != nil {
-			return []Node{}, err
-		}
-		nodes = append(nodes, children...)
+		wg.Add(1)
+		go browse(cl, r.ID.String(), path, level+1, ch, wg)
 	}
-
-	return nodes, nil
 }
 
 func join(a, b string) string {
