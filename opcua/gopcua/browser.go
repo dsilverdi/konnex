@@ -54,10 +54,6 @@ func (b Browser) Browse(serveruri string, nodeid string) ([]opcua.BrowsedNode, e
 	}
 	defer uaClient.Close()
 
-	// nodes, err := browse(uaClient, nodeid, "", 0)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	nodeCh := make(chan Node)
 	var wg sync.WaitGroup
 
@@ -67,12 +63,11 @@ func (b Browser) Browse(serveruri string, nodeid string) ([]opcua.BrowsedNode, e
 	go func() {
 		wg.Wait()
 		close(nodeCh)
-		fmt.Println("------- CLOSE NOW --------")
+		// fmt.Println("------- CLOSE NOW --------")
 	}()
 
 	var nodes []Node
 	count := 0
-	fmt.Println("--------- running read channel ---------")
 	for ch := range nodeCh {
 		count += 1
 		nodes = append(nodes, ch)
@@ -102,9 +97,6 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int, ch chan 
 		// fmt.Println("max children")
 		return
 	}
-
-	log := fmt.Sprintf("%s at %d", NodeID, level)
-	fmt.Println("processing | ", log)
 
 	nid, err := ua.ParseNodeID(NodeID)
 	if err != nil {
@@ -200,7 +192,7 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int, ch chan 
 
 	if nodeDef.NodeClass == ua.NodeClassVariable {
 		ch <- *nodeDef
-		fmt.Println("----------- SEND TO CHANNEL ----------")
+		// fmt.Println("----------- SEND TO CHANNEL ----------")
 	}
 
 	// ch <- *nodeDef
@@ -208,15 +200,6 @@ func browse(cl *opcuapkg.Client, NodeID string, path string, level int, ch chan 
 	browseChildren(cl, n, path, level, id.HasComponent, ch, wg)
 	browseChildren(cl, n, path, level, id.Organizes, ch, wg)
 	browseChildren(cl, n, path, level, id.HasProperty, ch, wg)
-
-	// wg.Add(1)
-	// go browsChildren(cl, n, path, level, id.HasComponent, ch, wg)
-
-	// wg.Add(1)
-	// go browsChildren(cl, n, path, level, id.Organizes, ch, wg)
-
-	// wg.Add(1)
-	// go browsChildren(cl, n, path, level, id.HasProperty, ch, wg)
 }
 
 func browseChildren(cl *opcuapkg.Client, node *opcuapkg.Node, path string, level int, refID uint32, ch chan Node, wg *sync.WaitGroup) {

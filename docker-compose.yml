@@ -39,3 +39,11 @@ services:
             - 8082:8082
         networks: 
             - konnex-net
+    
+    konnex-redis:
+        image: redis:6.2-alpine
+        restart: always
+        ports:
+            - '6379:6379'
+        networks:
+            - konnex-net 

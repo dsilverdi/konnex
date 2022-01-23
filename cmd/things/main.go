@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"konnex/things"
 	thingsapi "konnex/things/api"
+	rediscache "konnex/things/redis"
 	"konnex/things/sqldb"
 	"net/http"
 	"os"
@@ -14,21 +15,29 @@ import (
 	"konnex/pkg/uuid"
 
 	"github.com/go-kit/log"
+	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 )
 
 const (
-	DBHost     = "localhost"
-	DBPort     = "3306"
-	DBUser     = "root"
-	DBPassword = "konnexthings"
-	DBName     = "thingsdb"
-	HTTPport   = ":8080"
+	varDBHost     = "localhost"
+	varDBPort     = "3306"
+	varDBUser     = "root"
+	varDBPassword = "konnexthings"
+	varDBName     = "thingsdb"
+
+	varRedisHost = "konnex-redis"
+	varRedisPort = "6379"
+	varRedisPass = ""
+
+	varHTTPport = ":8080"
 )
 
 type SysConfig struct {
-	dbConfig sqldb.Config
-	httpAddr string
+	dbConfig  sqldb.Config
+	redisURL  string
+	redisPass string
+	httpAddr  string
 }
 
 func main() {
@@ -41,10 +50,12 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	redisCl := connectRedis(cfg.redisURL, cfg.redisPass)
+
 	db := connectDB(cfg)
 	defer db.Close()
 
-	svc := NewService(db)
+	svc := NewService(db, redisCl)
 
 	var h http.Handler
 	{
@@ -68,21 +79,25 @@ func main() {
 
 func loadConfig() SysConfig {
 	myDB := sqldb.Config{
-		Host: DBHost,
-		Port: DBPort,
-		User: DBUser,
-		Pass: DBPassword,
-		Name: DBName,
+		Host: varDBHost,
+		Port: varDBPort,
+		User: varDBUser,
+		Pass: varDBPassword,
+		Name: varDBName,
 	}
 
 	var (
-		httpAddr = flag.String("http.addr", HTTPport, "HTTP listen address")
+		httpAddr = flag.String("http.addr", varHTTPport, "HTTP listen address")
 	)
 	flag.Parse()
 
+	redisURL := fmt.Sprintf("%s:%s", varRedisHost, varRedisPort)
+
 	return SysConfig{
-		dbConfig: myDB,
-		httpAddr: *httpAddr,
+		dbConfig:  myDB,
+		redisURL:  redisURL,
+		redisPass: varRedisPass,
+		httpAddr:  *httpAddr,
 	}
 }
 
@@ -96,7 +111,15 @@ func connectDB(cfg SysConfig) *sqlx.DB {
 	return db
 }
 
-func NewService(db *sqlx.DB) things.Service {
+func connectRedis(url string, pass string) *redis.Client {
+	fmt.Println("Connect to Redis | ", url)
+	return redis.NewClient(&redis.Options{
+		Addr: url,
+		// Password: pass,
+	})
+}
+
+func NewService(db *sqlx.DB, redisCL *redis.Client) things.Service {
 	database := sqldb.NewDatabase(db)
 
 	ThingsRepository := sqldb.NewThingRepository(database)
@@ -105,5 +128,8 @@ func NewService(db *sqlx.DB) things.Service {
 
 	IDProvider := uuid.New()
 	svc := things.New(ThingsRepository, ChannelRepository, IDProvider)
+
+	svc = rediscache.NewEventStreamMiddleware(svc, redisCL)
+
 	return svc
 }

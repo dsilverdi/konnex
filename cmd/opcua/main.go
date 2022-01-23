@@ -7,26 +7,34 @@ import (
 	"konnex/opcua"
 	opcuapi "konnex/opcua/api"
 	"konnex/opcua/gopcua"
+	rediscl "konnex/opcua/redis"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/go-kit/log"
+	"github.com/go-redis/redis/v8"
 )
 
 const (
-	OPCIntervalMs = "1000"
-	OPCPolicy     = ""
-	OPCMode       = ""
-	OPCCertFile   = ""
-	OPCKeyFile    = ""
-	HTTPport      = ":8082"
+	varOPCIntervalMs = "1000"
+	varOPCPolicy     = ""
+	varOPCMode       = ""
+	varOPCCertFile   = ""
+	varOPCKeyFile    = ""
+	varHTTPport      = ":8082"
+	varRedisHost     = "konnex-redis"
+	varRedisPort     = "6379"
+	varESConsumer    = "opcua"
 )
 
 type Config struct {
-	uaConfig opcua.Config
-	httpAddr string
+	uaConfig   opcua.Config
+	httpAddr   string
+	redisURL   string
+	redisPass  string
+	esConsumer string
 }
 
 func main() {
@@ -42,6 +50,8 @@ func main() {
 	ctx := context.Background()
 	svc := NewService(ctx, cfg.uaConfig)
 
+	redisCl := connectRedis(cfg.redisURL, cfg.redisPass)
+
 	var h http.Handler
 	{
 		h = opcuapi.MakeHTTPHandler(svc, log.With(logger, "component", "HTTP"))
@@ -54,6 +64,7 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	go SubscribeEventStream(svc, redisCl, cfg.esConsumer)
 	go func() {
 		logger.Log("transport", "HTTP", "addr", cfg.httpAddr)
 		errs <- http.ListenAndServe(cfg.httpAddr, h)
@@ -64,21 +75,26 @@ func main() {
 
 func LoadConfig() Config {
 	opcuaCfg := opcua.Config{
-		Interval: OPCIntervalMs,
-		Policy:   OPCPolicy,
-		Mode:     OPCMode,
-		CertFile: OPCCertFile,
-		KeyFile:  OPCKeyFile,
+		Interval: varOPCIntervalMs,
+		Policy:   varOPCPolicy,
+		Mode:     varOPCMode,
+		CertFile: varOPCCertFile,
+		KeyFile:  varOPCKeyFile,
 	}
 
 	var (
-		httpAddr = flag.String("http.addr", HTTPport, "HTTP listen address")
+		httpAddr = flag.String("http.addr", varHTTPport, "HTTP listen address")
 	)
 	flag.Parse()
 
+	redisURL := fmt.Sprintf("%s:%s", varRedisHost, varRedisPort)
+
 	return Config{
-		uaConfig: opcuaCfg,
-		httpAddr: *httpAddr,
+		uaConfig:   opcuaCfg,
+		httpAddr:   *httpAddr,
+		redisURL:   redisURL,
+		redisPass:  "",
+		esConsumer: varESConsumer,
 	}
 }
 
@@ -86,4 +102,19 @@ func NewService(ctx context.Context, uaConfig opcua.Config) opcua.Service {
 	nodeBrowser := gopcua.NewBrowser(ctx)
 	svc := opcua.NewService(uaConfig, nodeBrowser)
 	return svc
+}
+
+func connectRedis(url string, pass string) *redis.Client {
+	fmt.Println("Connect to Redis | ", url)
+	return redis.NewClient(&redis.Options{
+		Addr: url,
+		// Password: pass,
+	})
+}
+
+func SubscribeEventStream(svc opcua.Service, client *redis.Client, consumer string) {
+	eventStream := rediscl.NewEventStream(svc, client, consumer)
+	if err := eventStream.Subscribe(context.Background(), "konnex.things"); err != nil {
+		fmt.Println("Error Reading EventStream Redis")
+	}
 }
