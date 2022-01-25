@@ -3,6 +3,7 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"konnex/opcua/data"
 	"konnex/pkg/errors"
 )
 
@@ -15,6 +16,9 @@ var (
 type Service interface {
 	//Browse OPCUA Node
 	Browse(context.Context, string, string, string) ([]BrowsedNode, error)
+
+	//Connect to OPCUA Server
+	CreateThing(ctx context.Context, ServerURI, NodeID string) error
 }
 
 type Config struct {
@@ -48,4 +52,10 @@ func (svc opcuaService) Browse(ctx context.Context, serveruri, namespace, identi
 	}
 
 	return nodes, nil
+}
+
+func (svc opcuaService) CreateThing(ctx context.Context, ServerURI, NodeID string) error {
+	fmt.Println("Got IoT Data Called From Redis | ", []string{ServerURI, NodeID})
+
+	return data.Save(ServerURI, NodeID)
 }

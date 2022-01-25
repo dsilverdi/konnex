@@ -4,6 +4,9 @@ networks:
     konnex-net:
         driver: bridge
 
+volumes:
+    konnex-opcua-volume:
+
 services: 
     things-db:
         image: mysql
@@ -39,6 +42,8 @@ services:
             - 8082:8082
         networks: 
             - konnex-net
+        volumes:
+            - konnex-opcua-volume:/store
     
     konnex-redis:
         image: redis:6.2-alpine

@@ -47,10 +47,10 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	redisCl := connectRedis(cfg.redisURL, cfg.redisPass)
+
 	ctx := context.Background()
 	svc := NewService(ctx, cfg.uaConfig)
-
-	redisCl := connectRedis(cfg.redisURL, cfg.redisPass)
 
 	var h http.Handler
 	{

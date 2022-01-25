@@ -88,8 +88,7 @@ func (es *eventStream) Subscribe(ctx context.Context, stream string) error {
 					break
 				}
 
-				fmt.Println("Reading From Redis |", cte)
-				// err = es.svc.CreateThing(ctx, cte.id, cte.opcuaNodeID)
+				err = es.svc.CreateThing(ctx, cte.serverUri, cte.nodeID)
 			}
 			if err != nil && err != errMetadataType {
 				fmt.Println("Failed to handle event sourcing: ", err.Error())
