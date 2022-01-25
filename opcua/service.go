@@ -32,14 +32,16 @@ type Config struct {
 }
 
 type opcuaService struct {
-	Config  Config
-	Browser Browser
+	Config     Config
+	Browser    Browser
+	Subscriber Subscriber
 }
 
-func NewService(cfg Config, browser Browser) Service {
+func NewService(cfg Config, browser Browser, sub Subscriber) Service {
 	return &opcuaService{
-		Config:  cfg,
-		Browser: browser,
+		Config:     cfg,
+		Browser:    browser,
+		Subscriber: sub,
 	}
 }
 
@@ -57,5 +59,13 @@ func (svc opcuaService) Browse(ctx context.Context, serveruri, namespace, identi
 func (svc opcuaService) CreateThing(ctx context.Context, ServerURI, NodeID string) error {
 	fmt.Println("Got IoT Data Called From Redis | ", []string{ServerURI, NodeID})
 
+	svc.Config.ServerURI = ServerURI
+	svc.Config.NodeID = NodeID
+
+	go func() {
+		if err := svc.Subscriber.Subscribe(ctx, svc.Config); err != nil {
+			fmt.Println("subscription failed", err)
+		}
+	}()
 	return data.Save(ServerURI, NodeID)
 }

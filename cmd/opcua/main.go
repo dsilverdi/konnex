@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"konnex/opcua"
 	opcuapi "konnex/opcua/api"
+	"konnex/opcua/data"
 	"konnex/opcua/gopcua"
 	rediscl "konnex/opcua/redis"
 	"net/http"
@@ -64,6 +65,7 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	go SubscribeFromSavedData()
 	go SubscribeEventStream(svc, redisCl, cfg.esConsumer)
 	go func() {
 		logger.Log("transport", "HTTP", "addr", cfg.httpAddr)
@@ -100,7 +102,8 @@ func LoadConfig() Config {
 
 func NewService(ctx context.Context, uaConfig opcua.Config) opcua.Service {
 	nodeBrowser := gopcua.NewBrowser(ctx)
-	svc := opcua.NewService(uaConfig, nodeBrowser)
+	sub := gopcua.NewSubscriber(ctx)
+	svc := opcua.NewService(uaConfig, nodeBrowser, sub)
 	return svc
 }
 
@@ -110,6 +113,15 @@ func connectRedis(url string, pass string) *redis.Client {
 		Addr: url,
 		// Password: pass,
 	})
+}
+
+func SubscribeFromSavedData() {
+	nodes, err := data.ReadAll()
+	if err != nil {
+		fmt.Println("Error Reading Data | ", err)
+	}
+
+	fmt.Println("Saved Node are | ", nodes)
 }
 
 func SubscribeEventStream(svc opcua.Service, client *redis.Client, consumer string) {
