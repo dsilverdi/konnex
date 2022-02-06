@@ -62,6 +62,9 @@ type Service interface {
 
 	// Get Authorized User Data
 	ViewAccount(context.Context, string) (*User, error)
+
+	// Token Validation
+	TokenValidation(context.Context, string) error
 }
 
 type UserService struct {
@@ -130,6 +133,11 @@ func (svc *UserService) Authorize(ctx context.Context, user User) (*Auth, error)
 			Expiration:  0,
 			CreatedAt:   time.Now(),
 		}
+
+		err = svc.AuthRepo.Save(ctx, *auth)
+		if err != nil {
+			return nil, errors.Wrap(ErrCreateEntity, err)
+		}
 	}
 
 	return auth, nil
@@ -137,4 +145,8 @@ func (svc *UserService) Authorize(ctx context.Context, user User) (*Auth, error)
 
 func (svc *UserService) ViewAccount(ctx context.Context, token string) (*User, error) {
 	return nil, nil
+}
+
+func (svc *UserService) TokenValidation(ctx context.Context, token string) error {
+	return nil
 }

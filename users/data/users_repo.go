@@ -22,10 +22,41 @@ func NewChannelRepository(db Database) users.UserRepository {
 	}
 }
 
-func (db *UserRepository) Save(ctx context.Context, user users.User) error {
+func (u *UserRepository) Save(ctx context.Context, user users.User) error {
+	query := `INSERT INTO users (id, username, password, created_at)
+	VALUES (:id, :username, :password, :created_at);`
+
+	userDB := &UserDB{
+		ID:        user.ID,
+		UserName:  user.Username,
+		Password:  user.Password,
+		CreatedAt: user.CreatedAt,
+	}
+
+	_, err := u.db.NamedExecContext(ctx, query, userDB)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (db *UserRepository) Read(ctx context.Context, username string) (*users.User, error) {
-	return nil, nil
+func (u *UserRepository) Read(ctx context.Context, username string) (*users.User, error) {
+	var userDB UserDB
+
+	query := `SELECT id, username, password, created_at FROM users WHERE username = ?`
+
+	err := u.db.QueryRowxContext(ctx, query, username).StructScan(&userDB)
+	if err != nil {
+		return nil, err
+	}
+
+	User := &users.User{
+		ID:        userDB.ID,
+		Username:  userDB.UserName,
+		Password:  userDB.Password,
+		CreatedAt: userDB.CreatedAt,
+	}
+
+	return User, nil
 }
