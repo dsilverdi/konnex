@@ -24,6 +24,7 @@ func MakeHTTPHandler(svc users.Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	e := MakeServerEndpoint(svc)
 	opt := []httptransport.ServerOption{
+		httptransport.ServerErrorEncoder(rest.EncodeError),
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
 
@@ -41,6 +42,13 @@ func MakeHTTPHandler(svc users.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
+	r.Methods("GET").Path("/profile").Handler(httptransport.NewServer(
+		e.GetProfileEndpoint,
+		decodeViewAccountRequest,
+		rest.EncodeResponse,
+		opt...,
+	))
+
 	return r
 }
 
@@ -52,7 +60,20 @@ func decodeUserRequest(_ context.Context, r *http.Request) (request interface{},
 	return req, nil
 }
 
+func decodeViewAccountRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
+	var req GetProfileReq
+	// if e := json.NewDecoder(r.Body).Decode(&req); e != nil{
+
+	// }
+	req.Token = r.Header.Get("Authorization")
+	return req, nil
+}
+
 type UserReqBody struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type GetProfileReq struct {
+	Token string
 }

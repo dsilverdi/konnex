@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"konnex/pkg/errors"
 	"konnex/pkg/rest"
 	"konnex/users"
 	"net/http"
@@ -10,14 +11,16 @@ import (
 )
 
 type Endpoint struct {
-	RegisterEndpoint  endpoint.Endpoint
-	AuthorizeEndpoint endpoint.Endpoint
+	RegisterEndpoint   endpoint.Endpoint
+	AuthorizeEndpoint  endpoint.Endpoint
+	GetProfileEndpoint endpoint.Endpoint
 }
 
 func MakeServerEndpoint(svc users.Service) Endpoint {
 	return Endpoint{
-		RegisterEndpoint:  RegisterEndpoint(svc),
-		AuthorizeEndpoint: AuthorizeEndpoint(svc),
+		RegisterEndpoint:   RegisterEndpoint(svc),
+		AuthorizeEndpoint:  AuthorizeEndpoint(svc),
+		GetProfileEndpoint: GetProfileEndpoint(svc),
 	}
 }
 
@@ -32,12 +35,7 @@ func RegisterEndpoint(svc users.Service) endpoint.Endpoint {
 
 		err = svc.Register(ctx, *NewUser)
 		if err != nil {
-			return rest.HTTPResponse{
-				Code:    http.StatusInternalServerError,
-				Status:  "Error",
-				Message: "Err Create User",
-				Errors:  err.Error(),
-			}, nil
+			return nil, err
 		}
 
 		return rest.HTTPResponse{
@@ -59,12 +57,7 @@ func AuthorizeEndpoint(svc users.Service) endpoint.Endpoint {
 
 		auth, err := svc.Authorize(ctx, *CurrentUser)
 		if err != nil {
-			return rest.HTTPResponse{
-				Code:    http.StatusBadRequest,
-				Status:  "Error",
-				Message: "Err Authorize",
-				Errors:  err.Error(),
-			}, nil
+			return nil, err
 		}
 
 		return rest.HTTPResponse{
@@ -76,5 +69,26 @@ func AuthorizeEndpoint(svc users.Service) endpoint.Endpoint {
 			},
 		}, nil
 
+	}
+}
+
+func GetProfileEndpoint(svc users.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(GetProfileReq)
+
+		if req.Token == "" {
+			return nil, errors.ErrUnauthorizedAccess
+		}
+
+		profile, err := svc.ViewAccount(ctx, req.Token)
+		if err != nil {
+			return nil, err
+		}
+
+		return rest.HTTPResponse{
+			Code:   http.StatusOK,
+			Status: "Success",
+			Data:   profile,
+		}, nil
 	}
 }

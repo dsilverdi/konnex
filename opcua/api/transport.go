@@ -25,6 +25,7 @@ func MakeHTTPHandler(svc opcua.Service, logger log.Logger) http.Handler {
 	r := mux.NewRouter()
 	e := MakeServerEndpoint(svc)
 	opt := []httptransport.ServerOption{
+		httptransport.ServerErrorEncoder(rest.EncodeError),
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
 

@@ -7,47 +7,6 @@ import (
 	"konnex/pkg/errors"
 )
 
-//JSON Format Struct
-
-var (
-	ErrInconsistentIDs = errors.New("inconsistent IDs")
-	ErrAlreadyExists   = errors.New("already exists")
-	ErrNotFound        = errors.New("not found")
-)
-
-var (
-	// ErrUnauthorizedAccess indicates missing or invalid credentials provided
-	// when accessing a protected resource.
-	ErrUnauthorizedAccess = errors.New("missing or invalid credentials provided")
-
-	// ErrCreateUUID indicates error in creating uuid for entity creation
-	ErrCreateUUID = errors.New("uuid creation failed")
-
-	// ErrCreateEntity indicates error in creating entity or entities
-	ErrCreateEntity = errors.New("create entity failed")
-
-	// ErrUpdateEntity indicates error in updating entity or entities
-	ErrUpdateEntity = errors.New("update entity failed")
-
-	// ErrAuthorization indicates a failure occurred while authorizing the entity.
-	ErrAuthorization = errors.New("failed to perform authorization over the entity")
-
-	// ErrViewEntity indicates error in viewing entity or entities
-	ErrViewEntity = errors.New("view entity failed")
-
-	// ErrRemoveEntity indicates error in removing entity
-	ErrRemoveEntity = errors.New("remove entity failed")
-
-	// ErrConnect indicates error in adding connection
-	ErrConnect = errors.New("add connection failed")
-
-	// ErrDisconnect indicates error in removing connection
-	ErrDisconnect = errors.New("remove connection failed")
-
-	// ErrFailedToRetrieveThings failed to retrieve things.
-	ErrFailedToRetrieveThings = errors.New("failed to retrieve group members")
-)
-
 type Service interface {
 	// Create Things
 	CreateThings(ctx context.Context, t Things) (*Things, error)
@@ -98,7 +57,7 @@ func (s *thingsService) CreateThings(ctx context.Context, t Things) (*Things, er
 	if t.ID == "" {
 		id, err := s.IDprovider.ID()
 		if err != nil {
-			return nil, errors.Wrap(ErrCreateUUID, err)
+			return nil, errors.Wrap(errors.ErrCreateUUID, err)
 		}
 
 		t.ID = id
@@ -107,7 +66,7 @@ func (s *thingsService) CreateThings(ctx context.Context, t Things) (*Things, er
 	t.Owner = "annon"
 	err := s.ThingRepository.Insert(ctx, t)
 	if err != nil {
-		return nil, errors.Wrap(ErrCreateEntity, err)
+		return nil, errors.Wrap(errors.ErrCreateEntity, err)
 	}
 
 	return &t, nil
@@ -119,7 +78,7 @@ func (s *thingsService) GetThings(ctx context.Context) ([]Things, error) {
 	thingsList, err := s.ThingRepository.GetAll(ctx)
 	if err != nil {
 		fmt.Println("db error")
-		return nil, errors.Wrap(ErrViewEntity, err)
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
 	}
 
 	return thingsList, nil
@@ -128,7 +87,7 @@ func (s *thingsService) GetThings(ctx context.Context) ([]Things, error) {
 func (s *thingsService) GetSpecificThing(ctx context.Context, id string) (*Things, error) {
 	things, err := s.ThingRepository.GetSpecific(ctx, id)
 	if err != nil {
-		return nil, errors.Wrap(ErrViewEntity, err)
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
 	}
 
 	return things, nil
@@ -137,7 +96,7 @@ func (s *thingsService) GetSpecificThing(ctx context.Context, id string) (*Thing
 func (s *thingsService) DeleteThing(ctx context.Context, id string) error {
 	err := s.ThingRepository.Delete(ctx, id)
 	if err != nil {
-		return errors.Wrap(ErrRemoveEntity, err)
+		return errors.Wrap(errors.ErrRemoveEntity, err)
 	}
 
 	return nil
@@ -148,7 +107,7 @@ func (s *thingsService) CreateChannel(ctx context.Context, ch Channel) (*Channel
 	if ch.ID == "" {
 		id, err := s.IDprovider.ID()
 		if err != nil {
-			return nil, errors.Wrap(ErrCreateUUID, err)
+			return nil, errors.Wrap(errors.ErrCreateUUID, err)
 		}
 
 		ch.ID = id
@@ -157,7 +116,7 @@ func (s *thingsService) CreateChannel(ctx context.Context, ch Channel) (*Channel
 	ch.Owner = "annon"
 	err := s.ChannelRepository.Insert(ctx, ch)
 	if err != nil {
-		return nil, errors.Wrap(ErrCreateEntity, err)
+		return nil, errors.Wrap(errors.ErrCreateEntity, err)
 	}
 
 	return &ch, nil
@@ -168,7 +127,7 @@ func (s *thingsService) GetChannels(ctx context.Context) ([]Channel, error) {
 
 	channels, err := s.ChannelRepository.GetAll(ctx)
 	if err != nil {
-		return nil, errors.Wrap(ErrViewEntity, err)
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
 	}
 
 	return channels, nil
@@ -177,7 +136,7 @@ func (s *thingsService) GetChannels(ctx context.Context) ([]Channel, error) {
 func (s *thingsService) GetSpecificChannel(ctx context.Context, id string) (*Channel, error) {
 	channel, err := s.ChannelRepository.GetSpecific(ctx, id)
 	if err != nil {
-		return nil, errors.Wrap(ErrViewEntity, err)
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
 	}
 
 	return channel, nil
@@ -186,7 +145,7 @@ func (s *thingsService) GetSpecificChannel(ctx context.Context, id string) (*Cha
 func (s *thingsService) DeleteChannel(ctx context.Context, id string) error {
 	err := s.ChannelRepository.Delete(ctx, id)
 	if err != nil {
-		return errors.Wrap(ErrRemoveEntity, err)
+		return errors.Wrap(errors.ErrRemoveEntity, err)
 	}
 
 	return nil

@@ -23,4 +23,5 @@ type UserJSONResponse struct {
 type UserRepository interface {
 	Save(ctx context.Context, user User) error
 	Read(ctx context.Context, username string) (*User, error)
+	ReadbyID(ctx context.Context, id string) (*User, error)
 }

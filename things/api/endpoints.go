@@ -103,7 +103,7 @@ func GetSpecificThingsEndpoint(svc things.Service) endpoint.Endpoint {
 				Status:  "Error",
 				Message: "Get Things Error",
 				Errors:  err.Error(),
-			}, nil
+			}, err
 		}
 
 		return rest.HTTPResponse{
@@ -124,7 +124,7 @@ func DeleteThingEndpoint(svc things.Service) endpoint.Endpoint {
 				Code:    http.StatusBadRequest,
 				Status:  "No ID provided",
 				Message: "Delete Things Error",
-			}, nil
+			}, err
 		}
 
 		err = svc.DeleteThing(ctx, req.ID)
@@ -214,7 +214,7 @@ func GetSpecificChannelEndpoint(svc things.Service) endpoint.Endpoint {
 				Status:  "Error",
 				Message: "Create Channel Error",
 				Errors:  err.Error(),
-			}, nil
+			}, err
 		}
 
 		return rest.HTTPResponse{
@@ -235,7 +235,7 @@ func DeleteChannelEndpoint(svc things.Service) endpoint.Endpoint {
 				Code:    http.StatusBadRequest,
 				Status:  "No ID provided",
 				Message: "Delete Channel Error",
-			}, nil
+			}, err
 		}
 
 		err = svc.DeleteChannel(ctx, req.ID)

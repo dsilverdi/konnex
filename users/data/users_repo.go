@@ -16,7 +16,7 @@ type UserDB struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-func NewChannelRepository(db Database) users.UserRepository {
+func NewUsersRepository(db Database) users.UserRepository {
 	return &UserRepository{
 		db: db,
 	}
@@ -47,6 +47,26 @@ func (u *UserRepository) Read(ctx context.Context, username string) (*users.User
 	query := `SELECT id, username, password, created_at FROM users WHERE username = ?`
 
 	err := u.db.QueryRowxContext(ctx, query, username).StructScan(&userDB)
+	if err != nil {
+		return nil, err
+	}
+
+	User := &users.User{
+		ID:        userDB.ID,
+		Username:  userDB.UserName,
+		Password:  userDB.Password,
+		CreatedAt: userDB.CreatedAt,
+	}
+
+	return User, nil
+}
+
+func (u *UserRepository) ReadbyID(ctx context.Context, id string) (*users.User, error) {
+	var userDB UserDB
+
+	query := `SELECT id, username, password, created_at FROM users WHERE id = ?`
+
+	err := u.db.QueryRowxContext(ctx, query, id).StructScan(&userDB)
 	if err != nil {
 		return nil, err
 	}

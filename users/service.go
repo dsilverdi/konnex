@@ -3,55 +3,18 @@ package users
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"fmt"
 	"konnex"
 	"konnex/pkg/errors"
 	"time"
+
+	stderr "errors"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 //JSON Format Struct
-
-var (
-	ErrInconsistentIDs = errors.New("inconsistent IDs")
-	ErrAlreadyExists   = errors.New("already exists")
-	ErrNotFound        = errors.New("not found")
-)
-
-var (
-	// ErrUnauthorizedAccess indicates missing or invalid credentials provided
-	// when accessing a protected resource.
-	ErrUnauthorizedAccess = errors.New("missing or invalid credentials provided")
-
-	// ErrCreateUUID indicates error in creating uuid for entity creation
-	ErrCreateUUID = errors.New("uuid creation failed")
-
-	// ErrCreateEntity indicates error in creating entity or entities
-	ErrCreateEntity = errors.New("create entity failed")
-
-	// ErrUpdateEntity indicates error in updating entity or entities
-	ErrUpdateEntity = errors.New("update entity failed")
-
-	// ErrAuthorization indicates a failure occurred while authorizing the entity.
-	ErrAuthorization = errors.New("failed to perform authorization over the entity")
-
-	// ErrViewEntity indicates error in viewing entity or entities
-	ErrViewEntity = errors.New("view entity failed")
-
-	// ErrRemoveEntity indicates error in removing entity
-	ErrRemoveEntity = errors.New("remove entity failed")
-
-	// ErrConnect indicates error in adding connection
-	ErrConnect = errors.New("add connection failed")
-
-	// ErrDisconnect indicates error in removing connection
-	ErrDisconnect = errors.New("remove connection failed")
-
-	// ErrFailedToRetrieveThings failed to retrieve things.
-	ErrFailedToRetrieveThings = errors.New("failed to retrieve group members")
-
-	// ErrWrongPassword indicates error in wrong password
-	ErrWrongPassword = errors.New("Wrong Password")
-)
 
 type Service interface {
 	// Register New User
@@ -64,7 +27,7 @@ type Service interface {
 	ViewAccount(context.Context, string) (*User, error)
 
 	// Token Validation
-	TokenValidation(context.Context, string) error
+	TokenValidation(context.Context, string) (*string, error)
 }
 
 type UserService struct {
@@ -82,6 +45,8 @@ func New(userrepo UserRepository, authrepo AuthRepository, idprovider konnex.IDp
 }
 
 func (svc *UserService) Register(ctx context.Context, user User) error {
+	var mysqlErr *mysql.MySQLError
+
 	NewUser := &User{
 		Username:  user.Username,
 		Password:  fmt.Sprintf("%x", sha256.Sum256([]byte(user.Password))),
@@ -90,7 +55,7 @@ func (svc *UserService) Register(ctx context.Context, user User) error {
 
 	id, err := svc.IDProvider.ID()
 	if err != nil {
-		return errors.Wrap(ErrCreateUUID, err)
+		return errors.Wrap(errors.ErrCreateUUID, err)
 	}
 
 	NewUser.ID = id
@@ -98,7 +63,10 @@ func (svc *UserService) Register(ctx context.Context, user User) error {
 	// Perform DB Call Here
 	err = svc.UserRepo.Save(ctx, *NewUser)
 	if err != nil {
-		return errors.Wrap(ErrCreateEntity, err)
+		if stderr.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+			return errors.Wrap(errors.ErrAlreadyExists, err)
+		}
+		return errors.Wrap(errors.ErrCreateEntity, err)
 	}
 
 	return nil
@@ -107,36 +75,36 @@ func (svc *UserService) Register(ctx context.Context, user User) error {
 func (svc *UserService) Authorize(ctx context.Context, user User) (*Auth, error) {
 	CurrentUser, err := svc.UserRepo.Read(ctx, user.Username)
 	if err != nil {
-		return nil, errors.Wrap(ErrNotFound, err)
+		return nil, errors.Wrap(errors.ErrNotFound, err)
 	}
 
 	password := fmt.Sprintf("%x", sha256.Sum256([]byte(user.Password)))
 	if password != CurrentUser.Password {
-		return nil, errors.Wrap(ErrWrongPassword, err)
+		return nil, errors.ErrWrongPassword
 	}
 
 	// Perform DB Call for Auth Repo Here
 	auth, err := svc.AuthRepo.Authorize(ctx, CurrentUser.ID)
 	if err != nil {
-		return nil, errors.Wrap(ErrViewEntity, err)
-	}
+		if err == sql.ErrNoRows {
+			NewToken, err := svc.IDProvider.ID()
+			if err != nil {
+				return nil, errors.Wrap(errors.ErrCreateUUID, err)
+			}
 
-	if auth == nil {
-		NewToken, err := svc.IDProvider.ID()
-		if err != nil {
-			return nil, errors.Wrap(ErrCreateUUID, err)
-		}
+			auth = &Auth{
+				ID:          CurrentUser.ID,
+				AccessToken: NewToken,
+				Expiration:  0,
+				CreatedAt:   time.Now(),
+			}
 
-		auth = &Auth{
-			ID:          CurrentUser.ID,
-			AccessToken: NewToken,
-			Expiration:  0,
-			CreatedAt:   time.Now(),
-		}
-
-		err = svc.AuthRepo.Save(ctx, *auth)
-		if err != nil {
-			return nil, errors.Wrap(ErrCreateEntity, err)
+			err = svc.AuthRepo.Save(ctx, *auth)
+			if err != nil {
+				return nil, errors.Wrap(errors.ErrCreateEntity, err)
+			}
+		} else {
+			return nil, errors.Wrap(errors.ErrViewEntity, err)
 		}
 	}
 
@@ -144,9 +112,24 @@ func (svc *UserService) Authorize(ctx context.Context, user User) (*Auth, error)
 }
 
 func (svc *UserService) ViewAccount(ctx context.Context, token string) (*User, error) {
-	return nil, nil
+	id, err := svc.TokenValidation(ctx, token)
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrUnauthorizedAccess, err)
+	}
+
+	user, err := svc.UserRepo.ReadbyID(ctx, *id)
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	return user, nil
 }
 
-func (svc *UserService) TokenValidation(ctx context.Context, token string) error {
-	return nil
+func (svc *UserService) TokenValidation(ctx context.Context, token string) (*string, error) {
+	id, err := svc.AuthRepo.Validate(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	return id, nil
 }

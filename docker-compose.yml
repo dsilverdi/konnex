@@ -32,6 +32,30 @@ services:
         networks: 
             - konnex-net
     
+    users-db:
+        image: mysql
+        ports: 
+            - "33061:3306"
+        environment: 
+            - MYSQL_ROOT_PASSWORD=konnexusers
+            - MYSQL_DATABASE=usersdb
+            - MYSQL_ROOT_HOST=%
+        networks: 
+            - konnex-net
+
+    konnex-users:
+        build: 
+            context: .
+            dockerfile: ./Dockerfile
+            args: 
+                SERVICE: users
+        ports: 
+            - 8081:8081
+        # depends_on:
+        #     - users-db
+        networks: 
+            - konnex-net
+
     konnex-opcua:
         build: 
             context: .

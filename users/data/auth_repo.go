@@ -62,3 +62,17 @@ func (a *AuthRepository) Authorize(ctx context.Context, id string) (*users.Auth,
 
 	return Auth, nil
 }
+
+// validate token
+func (a *AuthRepository) Validate(ctx context.Context, token string) (*string, error) {
+	var authDB UserAuthDB
+
+	query := `SELECT id, access_token, expired, created_at FROM users_auth WHERE access_token = ?`
+
+	err := a.db.QueryRowxContext(ctx, query, token).StructScan(&authDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authDB.ID, nil
+}

@@ -1,5 +1,47 @@
 package errors
 
+var (
+	ErrInconsistentIDs = New("inconsistent IDs")
+	ErrAlreadyExists   = New("already exists")
+	ErrNotFound        = New("not found")
+)
+
+var (
+	// ErrUnauthorizedAccess indicates missing or invalid credentials provided
+	// when accessing a protected resource.
+	ErrUnauthorizedAccess = New("missing or invalid credentials provided")
+
+	// ErrCreateUUID indicates error in creating uuid for entity creation
+	ErrCreateUUID = New("uuid creation failed")
+
+	// ErrCreateEntity indicates error in creating entity or entities
+	ErrCreateEntity = New("create entity failed")
+
+	// ErrUpdateEntity indicates error in updating entity or entities
+	ErrUpdateEntity = New("update entity failed")
+
+	// ErrAuthorization indicates a failure occurred while authorizing the entity.
+	ErrAuthorization = New("failed to perform authorization over the entity")
+
+	// ErrViewEntity indicates error in viewing entity or entities
+	ErrViewEntity = New("view entity failed")
+
+	// ErrRemoveEntity indicates error in removing entity
+	ErrRemoveEntity = New("remove entity failed")
+
+	// ErrConnect indicates error in adding connection
+	ErrConnect = New("add connection failed")
+
+	// ErrDisconnect indicates error in removing connection
+	ErrDisconnect = New("remove connection failed")
+
+	// ErrFailedToRetrieveThings failed to retrieve things.
+	ErrFailedToRetrieveThings = New("failed to retrieve group members")
+
+	// ErrWrongPassword indicates error in wrong password
+	ErrWrongPassword = New("Wrong Password")
+)
+
 type Error interface {
 
 	// Error implements the error interface.
