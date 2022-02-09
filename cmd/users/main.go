@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"konnex/pkg/uuid"
 	"konnex/users"
-	userapi "konnex/users/api"
+	userrestapi "konnex/users/api/rest"
 	"konnex/users/data"
 	"net/http"
 	"os"
@@ -56,7 +56,7 @@ func main() {
 
 	var h http.Handler
 	{
-		h = userapi.MakeHTTPHandler(svc, log.With(logger, "component", "HTTP"))
+		h = userrestapi.MakeHTTPHandler(svc, log.With(logger, "component", "HTTP"))
 	}
 
 	errs := make(chan error)

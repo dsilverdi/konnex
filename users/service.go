@@ -28,6 +28,9 @@ type Service interface {
 
 	// Token Validation
 	TokenValidation(context.Context, string) (*string, error)
+
+	// Identify Authenticated User
+	IdentifyUser(context.Context, string) (*User, error)
 }
 
 type UserService struct {
@@ -132,4 +135,13 @@ func (svc *UserService) TokenValidation(ctx context.Context, token string) (*str
 	}
 
 	return id, nil
+}
+
+func (svc *UserService) IdentifyUser(ctx context.Context, id string) (*User, error) {
+	user, err := svc.UserRepo.ReadbyID(ctx, id)
+	if err != nil {
+		return nil, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	return user, nil
 }

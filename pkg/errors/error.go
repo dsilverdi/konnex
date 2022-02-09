@@ -11,6 +11,10 @@ var (
 	// when accessing a protected resource.
 	ErrUnauthorizedAccess = New("missing or invalid credentials provided")
 
+	// ErrMalformedEntity indicates malformed entity specification (e.g.
+	// invalid owner or ID).
+	ErrMalformedEntity = New("malformed entity specification")
+
 	// ErrCreateUUID indicates error in creating uuid for entity creation
 	ErrCreateUUID = New("uuid creation failed")
 
