@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"konnex"
 	"konnex/pkg/uuid"
 	"konnex/users"
+	usergrpcapi "konnex/users/api/grpc"
 	userrestapi "konnex/users/api/rest"
 	"konnex/users/data"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +17,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/jmoiron/sqlx"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -27,20 +31,22 @@ const (
 	// varRedisPort = "6379"
 	// varRedisPass = ""
 
-	varHTTPport = ":8081"
+	varHTTPport     = ":8081"
+	varAuthGRPCport = ":9000"
+	varAuthUrl      = "localhost:9000"
 )
 
 type SysConfig struct {
 	dbConfig data.Config
 	// redisURL  string
 	// redisPass string
-	httpAddr string
+	httpAddr     string
+	authGRPCport string
+	authURL      string
 }
 
 func main() {
 	cfg := loadConfig()
-
-	fmt.Println("PRINT THIS")
 
 	var logger log.Logger
 	{
@@ -71,6 +77,8 @@ func main() {
 		errs <- http.ListenAndServe(cfg.httpAddr, h)
 	}()
 
+	go startGRPCServer(cfg.authGRPCport, svc, errs, logger)
+
 	logger.Log("exit", <-errs)
 }
 
@@ -94,7 +102,9 @@ func loadConfig() SysConfig {
 		dbConfig: myDB,
 		// redisURL:  redisURL,
 		// redisPass: varRedisPass,
-		httpAddr: *httpAddr,
+		httpAddr:     *httpAddr,
+		authGRPCport: varAuthGRPCport,
+		authURL:      varAuthUrl,
 	}
 }
 
@@ -119,4 +129,17 @@ func NewService(db *sqlx.DB) users.Service {
 	svc := users.New(UsersRepository, AuthRepository, IDProvider)
 
 	return svc
+}
+
+func startGRPCServer(port string, svc users.Service, errs chan error, logger log.Logger) {
+	listener, err := net.Listen("tcp", port)
+	if err != nil {
+		fmt.Printf("Failed to listen on port %s: %s", port, err)
+	}
+
+	server := grpc.NewServer()
+
+	konnex.RegisterAuthServiceServer(server, usergrpcapi.NewServer(svc))
+	logger.Log("transport", "GRPC", "addr", port)
+	errs <- server.Serve(listener)
 }

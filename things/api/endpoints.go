@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"konnex/pkg/errors"
 	"konnex/pkg/rest"
 	"konnex/things"
 	"net/http"
@@ -47,7 +48,7 @@ func CreateThingsEndpoint(svc things.Service) endpoint.Endpoint {
 			MetaData:  req.MetaData,
 		}
 
-		th, e := svc.CreateThings(ctx, data)
+		th, e := svc.CreateThings(ctx, data, req.Token)
 		if e != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -73,7 +74,7 @@ func GetThingsEndpoint(svc things.Service) endpoint.Endpoint {
 
 		fmt.Println(req.channelID)
 
-		things, err = svc.GetThings(ctx)
+		things, err = svc.GetThings(ctx, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -96,7 +97,11 @@ func GetSpecificThingsEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(getSpecificReq)
 
-		things, err := svc.GetSpecificThing(ctx, req.ID)
+		if req.ID == "" {
+			return nil, errors.ErrMalformedEntity
+		}
+
+		things, err := svc.GetSpecificThing(ctx, req.ID, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -127,7 +132,7 @@ func DeleteThingEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		err = svc.DeleteThing(ctx, req.ID)
+		err = svc.DeleteThing(ctx, req.ID, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -158,7 +163,7 @@ func CreateChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			Metadata: req.MetaData,
 		}
 
-		ch, err := svc.CreateChannel(ctx, data)
+		ch, err := svc.CreateChannel(ctx, data, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -184,7 +189,7 @@ func GetChannelEndpoint(svc things.Service) endpoint.Endpoint {
 
 		fmt.Println(req.Type)
 
-		channels, err = svc.GetChannels(ctx)
+		channels, err = svc.GetChannels(ctx, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -207,7 +212,11 @@ func GetSpecificChannelEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(getSpecificReq)
 
-		ch, err := svc.GetSpecificChannel(ctx, req.ID)
+		if req.ID == "" {
+			return nil, errors.ErrMalformedEntity
+		}
+
+		ch, err := svc.GetSpecificChannel(ctx, req.ID, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,
@@ -238,7 +247,7 @@ func DeleteChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			}, err
 		}
 
-		err = svc.DeleteChannel(ctx, req.ID)
+		err = svc.DeleteChannel(ctx, req.ID, req.Token)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,

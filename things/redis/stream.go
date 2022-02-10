@@ -25,13 +25,13 @@ func NewEventStreamMiddleware(svc things.Service, client *redis.Client) things.S
 	}
 }
 
-func (es *EventStream) CreateThings(ctx context.Context, t things.Things) (*things.Things, error) {
-	th, err := es.svc.CreateThings(ctx, t)
+func (es *EventStream) CreateThings(ctx context.Context, t things.Things, token string) (*things.Things, error) {
+	th, err := es.svc.CreateThings(ctx, t, token)
 	if err != nil {
 		return th, err
 	}
 
-	ch, err := es.svc.GetSpecificChannel(ctx, th.ChannelID)
+	ch, err := es.svc.GetSpecificChannel(ctx, th.ChannelID, token)
 	if err != nil {
 		return th, err
 	}
@@ -60,32 +60,31 @@ func (es *EventStream) CreateThings(ctx context.Context, t things.Things) (*thin
 	return th, nil
 }
 
-func (es *EventStream) GetThings(ctx context.Context) ([]things.Things, error) {
-
-	return es.svc.GetThings(ctx)
+func (es *EventStream) GetThings(ctx context.Context, token string) ([]things.Things, error) {
+	return es.svc.GetThings(ctx, token)
 }
 
-func (es *EventStream) GetSpecificThing(ctx context.Context, id string) (*things.Things, error) {
-	return es.svc.GetSpecificThing(ctx, id)
+func (es *EventStream) GetSpecificThing(ctx context.Context, id, token string) (*things.Things, error) {
+	return es.svc.GetSpecificThing(ctx, id, token)
 }
 
-func (es *EventStream) DeleteThing(ctx context.Context, id string) error {
-	return es.svc.DeleteThing(ctx, id)
+func (es *EventStream) DeleteThing(ctx context.Context, id, token string) error {
+	return es.svc.DeleteThing(ctx, id, token)
 }
 
 // Channel Services
-func (es *EventStream) CreateChannel(ctx context.Context, ch things.Channel) (*things.Channel, error) {
-	return es.svc.CreateChannel(ctx, ch)
+func (es *EventStream) CreateChannel(ctx context.Context, ch things.Channel, token string) (*things.Channel, error) {
+	return es.svc.CreateChannel(ctx, ch, token)
 }
 
-func (es *EventStream) GetChannels(ctx context.Context) ([]things.Channel, error) {
-	return es.svc.GetChannels(ctx)
+func (es *EventStream) GetChannels(ctx context.Context, token string) ([]things.Channel, error) {
+	return es.svc.GetChannels(ctx, token)
 }
 
-func (es *EventStream) GetSpecificChannel(ctx context.Context, id string) (*things.Channel, error) {
-	return es.svc.GetSpecificChannel(ctx, id)
+func (es *EventStream) GetSpecificChannel(ctx context.Context, id, token string) (*things.Channel, error) {
+	return es.svc.GetSpecificChannel(ctx, id, token)
 }
 
-func (es *EventStream) DeleteChannel(ctx context.Context, id string) error {
-	return es.svc.DeleteChannel(ctx, id)
+func (es *EventStream) DeleteChannel(ctx context.Context, id, token string) error {
+	return es.svc.DeleteChannel(ctx, id, token)
 }

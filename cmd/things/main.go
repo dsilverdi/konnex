@@ -3,20 +3,24 @@ package main
 import (
 	"flag"
 	"fmt"
+	"konnex"
 	"konnex/things"
 	thingsapi "konnex/things/api"
 	rediscache "konnex/things/redis"
 	"konnex/things/sqldb"
+	authapi "konnex/users/api/grpc"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"konnex/pkg/uuid"
 
 	"github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -30,14 +34,19 @@ const (
 	varRedisPort = "6379"
 	varRedisPass = ""
 
-	varHTTPport = ":8080"
+	varHTTPport     = ":8080"
+	varAuthGRPCport = ":9000"
+	varAuthUrl      = "konnex-users:9000"
 )
 
 type SysConfig struct {
-	dbConfig  sqldb.Config
-	redisURL  string
-	redisPass string
-	httpAddr  string
+	dbConfig     sqldb.Config
+	redisURL     string
+	redisPass    string
+	httpAddr     string
+	authGRPCport string
+	authURL      string
+	authTimeout  time.Duration
 }
 
 func main() {
@@ -55,7 +64,12 @@ func main() {
 	db := connectDB(cfg)
 	defer db.Close()
 
-	svc := NewService(db, redisCl)
+	auth, close := InitAuthClient(cfg)
+	if close != nil {
+		defer close()
+	}
+
+	svc := NewService(db, redisCl, auth)
 
 	var h http.Handler
 	{
@@ -91,13 +105,22 @@ func loadConfig() SysConfig {
 	)
 	flag.Parse()
 
+	authTimeout, err := time.ParseDuration("1s")
+	if err != nil {
+		fmt.Printf("Invalid %s value: %s", "1s", err.Error())
+		os.Exit(1)
+	}
+
 	redisURL := fmt.Sprintf("%s:%s", varRedisHost, varRedisPort)
 
 	return SysConfig{
-		dbConfig:  myDB,
-		redisURL:  redisURL,
-		redisPass: varRedisPass,
-		httpAddr:  *httpAddr,
+		dbConfig:     myDB,
+		redisURL:     redisURL,
+		redisPass:    varRedisPass,
+		httpAddr:     *httpAddr,
+		authGRPCport: varAuthGRPCport,
+		authURL:      varAuthUrl,
+		authTimeout:  authTimeout,
 	}
 }
 
@@ -119,7 +142,7 @@ func connectRedis(url string, pass string) *redis.Client {
 	})
 }
 
-func NewService(db *sqlx.DB, redisCL *redis.Client) things.Service {
+func NewService(db *sqlx.DB, redisCL *redis.Client, auth konnex.AuthServiceClient) things.Service {
 	database := sqldb.NewDatabase(db)
 
 	ThingsRepository := sqldb.NewThingRepository(database)
@@ -127,9 +150,27 @@ func NewService(db *sqlx.DB, redisCL *redis.Client) things.Service {
 	ChannelRepository := sqldb.NewChannelRepository(database)
 
 	IDProvider := uuid.New()
-	svc := things.New(ThingsRepository, ChannelRepository, IDProvider)
+	svc := things.New(ThingsRepository, ChannelRepository, IDProvider, auth)
 
 	svc = rediscache.NewEventStreamMiddleware(svc, redisCL)
 
 	return svc
+}
+
+func InitAuthClient(cfg SysConfig) (konnex.AuthServiceClient, func() error) {
+	conn := connectAuthGRPC(cfg)
+	return authapi.NewClient(conn, cfg.authTimeout), conn.Close
+}
+
+func connectAuthGRPC(cfg SysConfig) *grpc.ClientConn {
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithInsecure())
+
+	conn, err := grpc.Dial(cfg.authURL, opts...)
+	if err != nil {
+		fmt.Printf("Failed to connect to auth service: %s", err)
+		os.Exit(1)
+	}
+
+	return conn
 }

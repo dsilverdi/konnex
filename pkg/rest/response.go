@@ -91,7 +91,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 			errors.Contains(errorVal, errors.ErrViewEntity),
 			errors.Contains(errorVal, errors.ErrRemoveEntity),
 			errors.Contains(errorVal, errors.ErrConnect),
-			errors.Contains(errorVal, errors.ErrDisconnect):
+			errors.Contains(errorVal, errors.ErrDisconnect),
+			errors.Contains(errorVal, errors.ErrMalformedEntity):
 			//errors.Contains(errorVal, auth.ErrCreateGroup):
 			w.WriteHeader(http.StatusBadRequest)
 

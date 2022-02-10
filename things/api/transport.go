@@ -116,6 +116,9 @@ func MakeHTTPHandler(svc things.Service, logger log.Logger) http.Handler {
 
 func decodeCreateThingsRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req createThingsReq
+
+	req.Token = r.Header.Get("Authorization")
+
 	if e := json.NewDecoder(r.Body).Decode(&req); e != nil {
 		return nil, e
 	}
@@ -124,11 +127,17 @@ func decodeCreateThingsRequest(_ context.Context, r *http.Request) (request inte
 
 func decodeGetThingsRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	channelID := r.URL.Query().Get("channel_id")
-	return getThingsReq{channelID: channelID}, nil
+	token := r.Header.Get("Authorization")
+	return getThingsReq{
+		channelID: channelID,
+		Token:     token,
+	}, nil
 }
 
 func decodeCreateChannelRequest(_ context.Context, r *http.Request) (request interface{}, err error) {
 	var req createChannelReq
+
+	req.Token = r.Header.Get("Authorization")
 
 	if e := json.NewDecoder(r.Body).Decode(&req); e != nil {
 		return nil, e
@@ -140,7 +149,12 @@ func decodeGetChannelEndpoint(_ context.Context, r *http.Request) (request inter
 
 	Type := r.URL.Query().Get("type")
 
-	return getChannelReq{Type: Type}, nil
+	token := r.Header.Get("Authorization")
+
+	return getChannelReq{
+		Token: token,
+		Type:  Type,
+	}, nil
 }
 
 func decodeGetSpecific(_ context.Context, r *http.Request) (request interface{}, err error) {
@@ -149,5 +163,11 @@ func decodeGetSpecific(_ context.Context, r *http.Request) (request interface{},
 	if !ok {
 		return nil, ErrBadRouting
 	}
-	return getSpecificReq{ID: id}, nil
+
+	token := r.Header.Get("Authorization")
+
+	return getSpecificReq{
+		Token: token,
+		ID:    id,
+	}, nil
 }

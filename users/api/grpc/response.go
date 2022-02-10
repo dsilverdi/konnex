@@ -20,7 +20,7 @@ func decodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{
 
 func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(authorizeRes)
-	return konnex.AuthorizeRes{
+	return &konnex.AuthorizeRes{
 		Token:  res.token,
 		UserID: res.userid,
 	}, nil
@@ -41,7 +41,7 @@ func decodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}
 
 func encodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(identityRes)
-	return konnex.UserIdentity{
+	return &konnex.UserIdentity{
 		Id:       res.userid,
 		Username: res.username,
 	}, nil

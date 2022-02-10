@@ -14,7 +14,7 @@ type Things struct {
 
 type ThingRepository interface {
 	Insert(ctx context.Context, things Things) error
-	GetAll(ctx context.Context) ([]Things, error)
-	GetSpecific(ctx context.Context, id string) (*Things, error)
-	Delete(ctx context.Context, id string) error
+	GetAll(ctx context.Context, owner string) ([]Things, error)
+	GetSpecific(ctx context.Context, id, owner string) (*Things, error)
+	Delete(ctx context.Context, id, owner string) error
 }

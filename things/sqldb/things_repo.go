@@ -41,12 +41,12 @@ func (t ThingRepository) Insert(ctx context.Context, things things.Things) error
 	return nil
 }
 
-func (t ThingRepository) GetAll(ctx context.Context) ([]things.Things, error) {
+func (t ThingRepository) GetAll(ctx context.Context, owner string) ([]things.Things, error) {
 	var thingsList []things.Things
 
-	query := `SELECT id, channel_id, owner, name, metadata FROM things;`
+	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE owner = ?;`
 
-	rows, err := t.db.QueryxContext(ctx, query)
+	rows, err := t.db.QueryxContext(ctx, query, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +69,13 @@ func (t ThingRepository) GetAll(ctx context.Context) ([]things.Things, error) {
 	return thingsList, nil
 }
 
-func (t ThingRepository) GetSpecific(ctx context.Context, ID string) (*things.Things, error) {
+func (t ThingRepository) GetSpecific(ctx context.Context, ID, owner string) (*things.Things, error) {
 	var Thing things.Things
 	var thingDB ThingDB
 
-	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE id = ?`
+	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE id = ? AND owner = ?`
 
-	err := t.db.QueryRowxContext(ctx, query, ID).StructScan(&thingDB)
+	err := t.db.QueryRowxContext(ctx, query, ID, owner).StructScan(&thingDB)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +88,13 @@ func (t ThingRepository) GetSpecific(ctx context.Context, ID string) (*things.Th
 	return &Thing, nil
 }
 
-func (t ThingRepository) Delete(ctx context.Context, id string) error {
+func (t ThingRepository) Delete(ctx context.Context, id, owner string) error {
 	dbTh := ThingDB{
-		ID: id,
+		ID:    id,
+		Owner: owner,
 	}
 
-	query := `DELETE FROM things WHERE id = :id`
+	query := `DELETE FROM things WHERE id = :id AND owner = :owner`
 
 	_, err := t.db.NamedExecContext(ctx, query, dbTh)
 	if err != nil {

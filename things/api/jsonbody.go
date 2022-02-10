@@ -14,11 +14,13 @@ type HTTPResponse struct {
 }
 
 type getSpecificReq struct {
-	ID string
+	Token string
+	ID    string
 }
 
 //
 type createThingsReq struct {
+	Token     string
 	ID        string                 `json:"id,omitempty"`
 	ChannelID string                 `json:"channel_id,omitempty"`
 	Name      string                 `json:"name,omitempty"`
@@ -26,11 +28,13 @@ type createThingsReq struct {
 }
 
 type getThingsReq struct {
+	Token     string
 	channelID string
 }
 
 // Channel API Body
 type createChannelReq struct {
+	Token    string
 	ID       string                 `json:"id,omitempty"`
 	Name     string                 `json:"name,omitempty"`
 	Type     string                 `json:"type,omitempty"`
@@ -38,6 +42,7 @@ type createChannelReq struct {
 }
 
 type getChannelReq struct {
+	Token     string
 	Type      string `json:"type,omitempty"`
 	ChannelID string `json:"id,omitempty"`
 }

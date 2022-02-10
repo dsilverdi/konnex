@@ -40,12 +40,12 @@ func (ch ChannelRepository) Insert(ctx context.Context, channel things.Channel) 
 	return nil
 }
 
-func (ch ChannelRepository) GetAll(ctx context.Context) ([]things.Channel, error) {
+func (ch ChannelRepository) GetAll(ctx context.Context, owner string) ([]things.Channel, error) {
 	var channelList []things.Channel
 
-	query := `SELECT id, owner, name, type, metadata FROM channels;`
+	query := `SELECT id, owner, name, type, metadata FROM channels WHERE owner = ?;`
 
-	rows, err := ch.db.QueryxContext(ctx, query)
+	rows, err := ch.db.QueryxContext(ctx, query, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +68,13 @@ func (ch ChannelRepository) GetAll(ctx context.Context) ([]things.Channel, error
 	return channelList, nil
 }
 
-func (ch ChannelRepository) GetSpecific(ctx context.Context, ID string) (*things.Channel, error) {
+func (ch ChannelRepository) GetSpecific(ctx context.Context, ID, owner string) (*things.Channel, error) {
 	var Channel things.Channel
 	var channelDB ChannelDB
 
-	query := `SELECT id, owner, name, type, metadata FROM channels WHERE id = ?`
+	query := `SELECT id, owner, name, type, metadata FROM channels WHERE id = ? AND owner = ?`
 
-	err := ch.db.QueryRowxContext(ctx, query, ID).StructScan(&channelDB)
+	err := ch.db.QueryRowxContext(ctx, query, ID, owner).StructScan(&channelDB)
 	if err != nil {
 		return nil, err
 	}
@@ -87,12 +87,13 @@ func (ch ChannelRepository) GetSpecific(ctx context.Context, ID string) (*things
 	return &Channel, nil
 }
 
-func (ch ChannelRepository) Delete(ctx context.Context, id string) error {
+func (ch ChannelRepository) Delete(ctx context.Context, id, owner string) error {
 	dbCh := ChannelDB{
-		ID: id,
+		ID:    id,
+		Owner: owner,
 	}
 
-	query := `DELETE FROM channels WHERE id = :id`
+	query := `DELETE FROM channels WHERE id = :id AND owner = :owner`
 
 	_, err := ch.db.NamedExecContext(ctx, query, dbCh)
 	if err != nil {
