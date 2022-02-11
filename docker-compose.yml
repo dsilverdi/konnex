@@ -7,7 +7,22 @@ networks:
 volumes:
     konnex-opcua-volume:
 
-services: 
+services:
+    nginx:
+        image: nginx
+        ports:
+            - "443:443"
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./nginx/ssl:/etc/nginx/ssl:ro
+            - ./nginx/index.html:/app/html:ro
+        networks:
+            - konnex-net
+        depends_on:
+            - konnex-things
+            - konnex-users
+            - konnex-opcua
+
     things-db:
         image: mysql
         ports: 
@@ -17,7 +32,7 @@ services:
             - MYSQL_DATABASE=thingsdb
             - MYSQL_ROOT_HOST=%
         networks: 
-            - konnex-net
+            - konnex-net        
 
     konnex-things:
         build: 
