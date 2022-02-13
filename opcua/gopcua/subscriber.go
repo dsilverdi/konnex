@@ -39,16 +39,18 @@ var (
 )
 
 type Client struct {
-	ctx context.Context
+	ctx      context.Context
+	nodeData opcua.NodeDataRepository
 }
 
-func NewSubscriber(ctx context.Context) opcua.Subscriber {
+func NewSubscriber(ctx context.Context, nodedataRepo opcua.NodeDataRepository) opcua.Subscriber {
 	return &Client{
-		ctx: ctx,
+		ctx:      ctx,
+		nodeData: nodedataRepo,
 	}
 }
 
-func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config) error {
+func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config, id string) error {
 	opts := []opcuapkg.Option{
 		opcuapkg.SecurityMode(ua.MessageSecurityModeNone),
 	}
@@ -88,14 +90,14 @@ func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config) error {
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
-	go cl.startCallbackSub(ctx, mon, time.Second, time.Millisecond*500, wg, cfg.NodeID)
+	go cl.startCallbackSub(ctx, mon, time.Second, time.Millisecond*500, wg, id, cfg.NodeID)
 
 	<-ctx.Done()
 	wg.Wait()
 	return nil
 }
 
-func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, interval, lag time.Duration, wg *sync.WaitGroup, nodes ...string) {
+func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, interval, lag time.Duration, wg *sync.WaitGroup, id string, nodes ...string) {
 	fmt.Println("SUBS TO | ", nodes)
 	sub, err := m.Subscribe(
 		ctx,
@@ -106,13 +108,15 @@ func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, 
 			if msg.Error != nil {
 				log.Printf("[callback] error=%s", msg.Error)
 			} else {
-				log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
+				// log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
+				cl.saveData(ctx, msg, id)
 			}
 			time.Sleep(lag)
 		},
 		nodes...)
 
 	if err != nil {
+		fmt.Print("error di sini startcallback")
 		log.Fatal(err)
 	}
 
@@ -125,4 +129,40 @@ func (cl *Client) cleanup(sub *monitor.Subscription, wg *sync.WaitGroup) {
 	log.Printf("stats: sub=%d delivered=%d dropped=%d", sub.SubscriptionID(), sub.Delivered(), sub.Dropped())
 	sub.Unsubscribe(context.Background())
 	wg.Done()
+}
+
+func (cl *Client) saveData(ctx context.Context, msg *monitor.DataChangeMessage, id string) {
+	NewNodeData := &opcua.NodeData{
+		Time:    time.Now(),
+		ThingID: id,
+	}
+
+	switch msg.Value.Type() {
+	case ua.TypeIDBoolean:
+		NewNodeData.DataType = "boolean"
+	case ua.TypeIDString, ua.TypeIDByteString:
+		NewNodeData.DataType = "string"
+	case ua.TypeIDDataValue:
+		NewNodeData.DataType = "datavalue"
+	case ua.TypeIDInt64, ua.TypeIDInt32, ua.TypeIDInt16:
+		NewNodeData.DataType = "int"
+	case ua.TypeIDUint64, ua.TypeIDUint32, ua.TypeIDUint16:
+		NewNodeData.DataType = "uint"
+	case ua.TypeIDFloat, ua.TypeIDDouble:
+		NewNodeData.DataType = "float"
+	case ua.TypeIDByte:
+		NewNodeData.DataType = "byte"
+	case ua.TypeIDDateTime:
+		NewNodeData.DataType = "datetime"
+	default:
+		NewNodeData.DataType = "none"
+	}
+
+	msgVal := fmt.Sprintf("%v", msg.Value.Value())
+	NewNodeData.Data = msgVal
+
+	err := cl.nodeData.Save(ctx, NewNodeData)
+	if err != nil {
+		log.Printf("Error Save to DB | %s", err.Error())
+	}
 }

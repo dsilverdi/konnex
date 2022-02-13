@@ -70,6 +70,17 @@ services:
         networks: 
             - konnex-net
 
+    opcua-db:
+        image: timescale/timescaledb:latest-pg11
+        environment:
+            - POSTGRES_USER=opcua
+            - POSTGRES_PASSWORD=konnexopcua
+            - POSTGRES_DB=opcua
+        ports:
+            - "5432:5432"
+        networks:
+            - konnex-net
+
     konnex-opcua:
         build: 
             context: .
@@ -80,6 +91,8 @@ services:
             - 8082:8082
         networks: 
             - konnex-net
+        depends_on:
+            - opcua-db
         volumes:
             - konnex-opcua-volume:/store
     

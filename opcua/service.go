@@ -3,7 +3,6 @@ package opcua
 import (
 	"context"
 	"fmt"
-	"konnex/opcua/data"
 	"konnex/pkg/errors"
 )
 
@@ -18,7 +17,7 @@ type Service interface {
 	Browse(context.Context, string, string, string) ([]BrowsedNode, error)
 
 	//Connect to OPCUA Server
-	CreateThing(ctx context.Context, ServerURI, NodeID string) error
+	CreateThing(ctx context.Context, ThingsID, ServerURI, NodeID string) error
 }
 
 type Config struct {
@@ -35,13 +34,15 @@ type opcuaService struct {
 	Config     Config
 	Browser    Browser
 	Subscriber Subscriber
+	NodeRepo   NodeRepository
 }
 
-func NewService(cfg Config, browser Browser, sub Subscriber) Service {
+func NewService(cfg Config, browser Browser, sub Subscriber, noderepo NodeRepository) Service {
 	return &opcuaService{
 		Config:     cfg,
 		Browser:    browser,
 		Subscriber: sub,
+		NodeRepo:   noderepo,
 	}
 }
 
@@ -56,16 +57,23 @@ func (svc opcuaService) Browse(ctx context.Context, serveruri, namespace, identi
 	return nodes, nil
 }
 
-func (svc opcuaService) CreateThing(ctx context.Context, ServerURI, NodeID string) error {
+func (svc opcuaService) CreateThing(ctx context.Context, ThingsID, ServerURI, NodeID string) error {
 	fmt.Println("Got IoT Data Called From Redis | ", []string{ServerURI, NodeID})
 
 	svc.Config.ServerURI = ServerURI
 	svc.Config.NodeID = NodeID
 
 	go func() {
-		if err := svc.Subscriber.Subscribe(ctx, svc.Config); err != nil {
+		if err := svc.Subscriber.Subscribe(ctx, svc.Config, ThingsID); err != nil {
 			fmt.Println("subscription failed", err)
 		}
 	}()
-	return data.Save(ServerURI, NodeID)
+
+	NewNode := &Node{
+		ID:        ThingsID,
+		ServerUri: ServerURI,
+		NodeID:    NodeID,
+	}
+
+	return svc.NodeRepo.Save(ctx, NewNode)
 }

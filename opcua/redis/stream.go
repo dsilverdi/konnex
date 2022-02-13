@@ -88,7 +88,7 @@ func (es *eventStream) Subscribe(ctx context.Context, stream string) error {
 					break
 				}
 
-				err = es.svc.CreateThing(ctx, cte.serverUri, cte.nodeID)
+				err = es.svc.CreateThing(ctx, cte.id, cte.serverUri, cte.nodeID)
 			}
 			if err != nil && err != errMetadataType {
 				fmt.Println("Failed to handle event sourcing: ", err.Error())

@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-kit/log"
 	"github.com/go-redis/redis/v8"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 const (
@@ -51,7 +52,15 @@ func main() {
 	redisCl := connectRedis(cfg.redisURL, cfg.redisPass)
 
 	ctx := context.Background()
-	svc := NewService(ctx, cfg.uaConfig)
+	dbConn, err := data.ConnectDB(ctx)
+	if err != nil {
+		fmt.Println("Error Connecting to Database | ", err)
+		os.Exit(1)
+	}
+	defer dbConn.Close()
+
+	sub := NewSubscriber(ctx, dbConn)
+	svc := NewService(ctx, sub, cfg.uaConfig, dbConn)
 
 	var h http.Handler
 	{
@@ -100,13 +109,17 @@ func LoadConfig() Config {
 	}
 }
 
-func NewService(ctx context.Context, uaConfig opcua.Config) opcua.Service {
+func NewService(ctx context.Context, sub opcua.Subscriber, uaConfig opcua.Config, conn *pgxpool.Pool) opcua.Service {
 	nodeBrowser := gopcua.NewBrowser(ctx)
-	sub := gopcua.NewSubscriber(ctx)
-	svc := opcua.NewService(uaConfig, nodeBrowser, sub)
+	noderepo := data.NewNodeRepo(conn)
+	svc := opcua.NewService(uaConfig, nodeBrowser, sub, noderepo)
 	return svc
 }
 
+func NewSubscriber(ctx context.Context, conn *pgxpool.Pool) opcua.Subscriber {
+	nodeData := data.NewNodeDataRepo(conn)
+	return gopcua.NewSubscriber(ctx, nodeData)
+}
 func connectRedis(url string, pass string) *redis.Client {
 	fmt.Println("Connect to Redis | ", url)
 	return redis.NewClient(&redis.Options{
