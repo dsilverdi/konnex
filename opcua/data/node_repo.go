@@ -28,6 +28,29 @@ func (db *NodeRepository) Save(ctx context.Context, node *opcua.Node) error {
 	return nil
 }
 
+func (db *NodeRepository) ReadAll(ctx context.Context) ([]opcua.Node, error) {
+	var nodes []opcua.Node
+
+	query := `SELECT id, server_uri, node_id FROM node`
+
+	rows, err := db.conn.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var r opcua.Node
+		err = rows.Scan(&r.ID, &r.ServerUri, &r.NodeID)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, r)
+	}
+
+	return nodes, nil
+}
+
 func (db *NodeRepository) ReadbyID(ctx context.Context, id string) (*opcua.Node, error) {
 	var node *opcua.Node
 	return node, nil

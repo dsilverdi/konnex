@@ -20,6 +20,7 @@ type NodeData struct {
 
 type NodeRepository interface {
 	Save(context.Context, *Node) error
+	ReadAll(context.Context) ([]Node, error)
 	ReadbyID(context.Context, string) (*Node, error)
 	Delete(context.Context, string) error
 }

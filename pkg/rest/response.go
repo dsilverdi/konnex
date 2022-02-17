@@ -16,8 +16,9 @@ const (
 
 type HTTPResponse struct {
 	Code    int         `json:"code,omitempty"`
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
+	Status  string      `json:"status,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Total   int         `json:"total,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 	Errors  interface{} `json:"errors,omitempty"`
 }

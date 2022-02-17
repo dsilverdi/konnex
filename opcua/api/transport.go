@@ -36,6 +36,12 @@ func MakeHTTPHandler(svc opcua.Service, logger log.Logger) http.Handler {
 		opt...,
 	))
 
+	r.Methods("GET").Path("/monitor/{id}").Handler(httptransport.NewServer(
+		e.MonitorEndpoint,
+		decodeGetData,
+		rest.EncodeResponse,
+		opt...,
+	))
 	fmt.Print(opt)
 	return r
 }
@@ -48,8 +54,26 @@ func decodeBrowseRequest(_ context.Context, r *http.Request) (request interface{
 	return req, nil
 }
 
+func decodeGetData(_ context.Context, r *http.Request) (request interface{}, err error) {
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		return nil, ErrBadRouting
+	}
+
+	// token := r.Header.Get("Authorization")
+
+	return GetMonitorReq{
+		ID: id,
+	}, nil
+}
+
 type BrowseReq struct {
 	ServerURI  string `json:"server-uri"`
 	NameSpace  string `json:"namespace"`
 	Identifier string `json:"identifier"`
+}
+
+type GetMonitorReq struct {
+	ID string
 }

@@ -59,8 +59,9 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	sub := NewSubscriber(ctx, dbConn)
-	svc := NewService(ctx, sub, cfg.uaConfig, dbConn)
+	monitor := data.NewNodeDataRepo(dbConn)
+	sub := gopcua.NewSubscriber(ctx, monitor)
+	svc := NewService(ctx, sub, cfg.uaConfig, dbConn, monitor)
 
 	var h http.Handler
 	{
@@ -74,7 +75,7 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	go SubscribeFromSavedData()
+	go SubscribeFromSavedData(ctx, svc)
 	go SubscribeEventStream(svc, redisCl, cfg.esConsumer)
 	go func() {
 		logger.Log("transport", "HTTP", "addr", cfg.httpAddr)
@@ -109,17 +110,18 @@ func LoadConfig() Config {
 	}
 }
 
-func NewService(ctx context.Context, sub opcua.Subscriber, uaConfig opcua.Config, conn *pgxpool.Pool) opcua.Service {
+func NewService(ctx context.Context, sub opcua.Subscriber, uaConfig opcua.Config, conn *pgxpool.Pool, monitor opcua.NodeDataRepository) opcua.Service {
 	nodeBrowser := gopcua.NewBrowser(ctx)
 	noderepo := data.NewNodeRepo(conn)
-	svc := opcua.NewService(uaConfig, nodeBrowser, sub, noderepo)
+	svc := opcua.NewService(uaConfig, nodeBrowser, sub, noderepo, monitor)
 	return svc
 }
 
-func NewSubscriber(ctx context.Context, conn *pgxpool.Pool) opcua.Subscriber {
-	nodeData := data.NewNodeDataRepo(conn)
-	return gopcua.NewSubscriber(ctx, nodeData)
-}
+// func NewSubscriber(ctx context.Context, conn *pgxpool.Pool) opcua.Subscriber {
+// 	nodeData := data.NewNodeDataRepo(conn)
+// 	return gopcua.NewSubscriber(ctx, nodeData)
+// }
+
 func connectRedis(url string, pass string) *redis.Client {
 	fmt.Println("Connect to Redis | ", url)
 	return redis.NewClient(&redis.Options{
@@ -128,13 +130,10 @@ func connectRedis(url string, pass string) *redis.Client {
 	})
 }
 
-func SubscribeFromSavedData() {
-	nodes, err := data.ReadAll()
-	if err != nil {
-		fmt.Println("Error Reading Data | ", err)
+func SubscribeFromSavedData(ctx context.Context, svc opcua.Service) {
+	if err := svc.SubscribeWithDB(ctx); err != nil {
+		fmt.Println("Error Reading Nodes from DB")
 	}
-
-	fmt.Println("Saved Node are | ", nodes)
 }
 
 func SubscribeEventStream(svc opcua.Service, client *redis.Client, consumer string) {
