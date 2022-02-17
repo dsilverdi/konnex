@@ -4,16 +4,30 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func ConnectDB(ctx context.Context) (*pgxpool.Pool, error) {
 	connStr := "postgres://opcua:konnexopcua@opcua-db:5432/opcua"
-	conn, err := pgxpool.Connect(ctx, connStr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+
+	var err error
+	var conn *pgxpool.Pool
+
+	for {
+		conn, err = pgxpool.Connect(ctx, connStr)
+		if err == nil {
+			break
+		}
+
+		if !strings.Contains(err.Error(), "connect: connection refused") {
+			return nil, err
+		}
+
+		const retryDuration = 5 * time.Second
+		time.Sleep(retryDuration)
 	}
 
 	//run a simple query to check our connection

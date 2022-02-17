@@ -78,11 +78,14 @@ func (svc opcuaService) Browse(ctx context.Context, serveruri, namespace, identi
 func (svc opcuaService) CreateThing(ctx context.Context, ThingsID, ServerURI, NodeID string) error {
 	fmt.Println("Got IoT Data Called From Redis | ", []string{ServerURI, NodeID})
 
-	go func() {
-		if err := svc.Subscriber.Subscribe(ctx, svc.Config, ThingsID); err != nil {
+	svc.Config.ServerURI = ServerURI
+	svc.Config.NodeID = NodeID
+
+	go func(cfg Config, id string) {
+		if err := svc.Subscriber.Subscribe(ctx, cfg, id); err != nil {
 			fmt.Println("subscription failed", err)
 		}
-	}()
+	}(svc.Config, ThingsID)
 
 	NewNode := &Node{
 		ID:        ThingsID,
@@ -105,11 +108,11 @@ func (svc opcuaService) SubscribeWithDB(ctx context.Context) error {
 		svc.Config.ServerURI = node.ServerUri
 		svc.Config.NodeID = node.NodeID
 		thingsid := node.ID
-		go func() {
-			if err := svc.Subscriber.Subscribe(ctx, svc.Config, thingsid); err != nil {
+		go func(cfg Config, thingsid string) {
+			if err := svc.Subscriber.Subscribe(context.Background(), cfg, thingsid); err != nil {
 				fmt.Println("subscription failed", err)
 			}
-		}()
+		}(svc.Config, thingsid)
 	}
 
 	return nil
