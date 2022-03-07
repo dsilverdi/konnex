@@ -64,6 +64,7 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 	switch errorVal := err.(type) {
 	case errors.Error:
 		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		switch {
 		case errors.Contains(errorVal, errors.ErrUnauthorizedAccess):
@@ -93,7 +94,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 			errors.Contains(errorVal, errors.ErrRemoveEntity),
 			errors.Contains(errorVal, errors.ErrConnect),
 			errors.Contains(errorVal, errors.ErrDisconnect),
-			errors.Contains(errorVal, errors.ErrMalformedEntity):
+			errors.Contains(errorVal, errors.ErrMalformedEntity),
+			errors.Contains(errorVal, errors.ErrAlreadyExists):
 			//errors.Contains(errorVal, auth.ErrCreateGroup):
 			w.WriteHeader(http.StatusBadRequest)
 

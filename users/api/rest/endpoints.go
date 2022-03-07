@@ -28,6 +28,14 @@ func RegisterEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(UserReqBody)
 
+		if req.Username == "" {
+			return nil, errors.ErrCreateEntity
+		}
+
+		if req.Password == "" {
+			return nil, errors.ErrCreateEntity
+		}
+
 		NewUser := &users.User{
 			Username: req.Username,
 			Password: req.Password,
@@ -49,6 +57,14 @@ func RegisterEndpoint(svc users.Service) endpoint.Endpoint {
 func AuthorizeEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(UserReqBody)
+
+		if req.Username == "" {
+			return nil, errors.ErrCreateEntity
+		}
+
+		if req.Password == "" {
+			return nil, errors.ErrCreateEntity
+		}
 
 		CurrentUser := &users.User{
 			Username: req.Username,
