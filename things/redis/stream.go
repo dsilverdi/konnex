@@ -60,8 +60,8 @@ func (es *EventStream) CreateThings(ctx context.Context, t things.Things, token 
 	return th, nil
 }
 
-func (es *EventStream) GetThings(ctx context.Context, token string) ([]things.Things, error) {
-	return es.svc.GetThings(ctx, token)
+func (es *EventStream) GetThings(ctx context.Context, token, channelID string) ([]things.Things, error) {
+	return es.svc.GetThings(ctx, token, channelID)
 }
 
 func (es *EventStream) GetSpecificThing(ctx context.Context, id, token string) (*things.Things, error) {

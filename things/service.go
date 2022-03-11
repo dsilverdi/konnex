@@ -13,7 +13,7 @@ type Service interface {
 	CreateThings(ctx context.Context, t Things, token string) (*Things, error)
 
 	// Get List of Things
-	GetThings(ctx context.Context, token string) ([]Things, error)
+	GetThings(ctx context.Context, token, channelID string) ([]Things, error)
 
 	// Get Specific Thing
 	GetSpecificThing(ctx context.Context, id, token string) (*Things, error)
@@ -85,7 +85,7 @@ func (s *thingsService) CreateThings(ctx context.Context, t Things, token string
 	return &t, nil
 }
 
-func (s *thingsService) GetThings(ctx context.Context, token string) ([]Things, error) {
+func (s *thingsService) GetThings(ctx context.Context, token, channelID string) ([]Things, error) {
 	var thingsList []Things
 
 	auth, err := s.Auth.Authorize(ctx, &konnex.Token{Value: token})
@@ -98,7 +98,7 @@ func (s *thingsService) GetThings(ctx context.Context, token string) ([]Things, 
 		return nil, errors.Wrap(errors.ErrAuthorization, err)
 	}
 
-	thingsList, err = s.ThingRepository.GetAll(ctx, user.Username)
+	thingsList, err = s.ThingRepository.GetAll(ctx, user.Username, channelID)
 	if err != nil {
 		fmt.Println("db error")
 		return nil, errors.Wrap(errors.ErrViewEntity, err)

@@ -58,15 +58,6 @@ func migrateDB(db *sqlx.DB) error {
 			{
 				Id: "things_1",
 				Up: []string{
-					`CREATE TABLE IF NOT EXISTS things (
-						id       	VARCHAR(255),
-						owner    	VARCHAR(255) NOT NULL,
-						channel_id	VARCHAR(255), 
-						name     	VARCHAR(255) NOT NULL,
-						metadata 	TEXT,
-						PRIMARY KEY (id)
-					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
-
 					`CREATE TABLE IF NOT EXISTS channels (
 						id       VARCHAR(255),
 						owner    VARCHAR(255) NOT NULL,
@@ -74,6 +65,16 @@ func migrateDB(db *sqlx.DB) error {
 						type	 VARCHAR(255) NOT NULL,
 						metadata TEXT,
 						PRIMARY KEY (id)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
+
+					`CREATE TABLE IF NOT EXISTS things (
+						id       	VARCHAR(255),
+						owner    	VARCHAR(255) NOT NULL,
+						channel_id	VARCHAR(255), 
+						name     	VARCHAR(255) NOT NULL,
+						metadata 	TEXT,
+						PRIMARY KEY (id),
+						FOREIGN KEY (channel_id) REFERENCES channels (id) ON DELETE CASCADE  
 					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;`,
 				},
 				Down: []string{

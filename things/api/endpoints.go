@@ -74,7 +74,7 @@ func GetThingsEndpoint(svc things.Service) endpoint.Endpoint {
 
 		fmt.Println(req.channelID)
 
-		things, err = svc.GetThings(ctx, req.Token)
+		things, err = svc.GetThings(ctx, req.Token, req.channelID)
 		if err != nil {
 			return rest.HTTPResponse{
 				Code:    http.StatusNotFound,

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"konnex/things"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type ThingRepository struct {
@@ -41,12 +43,20 @@ func (t ThingRepository) Insert(ctx context.Context, things things.Things) error
 	return nil
 }
 
-func (t ThingRepository) GetAll(ctx context.Context, owner string) ([]things.Things, error) {
+func (t ThingRepository) GetAll(ctx context.Context, owner, channelID string) ([]things.Things, error) {
 	var thingsList []things.Things
+	var rows *sqlx.Rows
+	var err error
 
-	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE owner = ?;`
+	query := `SELECT id, channel_id, owner, name, metadata FROM things WHERE owner = ? `
 
-	rows, err := t.db.QueryxContext(ctx, query, owner)
+	if len(channelID) > 0 {
+		query += `AND channel_id = ?`
+		rows, err = t.db.QueryxContext(ctx, query, owner, channelID)
+	} else {
+		rows, err = t.db.QueryxContext(ctx, query, owner)
+	}
+
 	if err != nil {
 		return nil, err
 	}
