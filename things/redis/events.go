@@ -5,10 +5,16 @@ import "encoding/json"
 const (
 	thingPrefix = "thing."
 	thingCreate = thingPrefix + "create"
+	thingDelete = thingPrefix + "delete"
+
+	channelPrefix = "channel."
+	// channelCreate = channelPrefix + "create"
+	channelDelete = channelPrefix + "delete"
 )
 
 type createThingEvent struct {
 	id              string
+	channelID       string
 	owner           string
 	name            string
 	thingMetadata   map[string]interface{}
@@ -17,9 +23,10 @@ type createThingEvent struct {
 
 func (cte createThingEvent) Encode() map[string]interface{} {
 	val := map[string]interface{}{
-		"id":        cte.id,
-		"owner":     cte.owner,
-		"operation": thingCreate,
+		"id":         cte.id,
+		"channel_id": cte.channelID,
+		"owner":      cte.owner,
+		"operation":  thingCreate,
 	}
 
 	if cte.name != "" {
@@ -42,6 +49,32 @@ func (cte createThingEvent) Encode() map[string]interface{} {
 		}
 
 		val["channel_metadata"] = string(metadata)
+	}
+
+	return val
+}
+
+type deleteThingEvent struct {
+	id string
+}
+
+func (e deleteThingEvent) Encode() map[string]interface{} {
+	val := map[string]interface{}{
+		"id":        e.id,
+		"operation": thingDelete,
+	}
+
+	return val
+}
+
+type deleteChannelEvent struct {
+	id string
+}
+
+func (e deleteChannelEvent) Encode() map[string]interface{} {
+	val := map[string]interface{}{
+		"id":        e.id,
+		"operation": channelDelete,
 	}
 
 	return val

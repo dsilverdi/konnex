@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"konnex/opcua"
@@ -20,15 +19,11 @@ const (
 
 	thingPrefix = "thing."
 	thingCreate = thingPrefix + "create"
-	// thingUpdate     = thingPrefix + "update"
-	// thingRemove     = thingPrefix + "remove"
-	// thingConnect    = thingPrefix + "connect"
-	// thingDisconnect = thingPrefix + "disconnect"
+	thingDelete = thingPrefix + "delete"
 
-	// channelPrefix = "channel."
+	channelPrefix = "channel."
 	// channelCreate = channelPrefix + "create"
-	// channelUpdate = channelPrefix + "update"
-	// channelRemove = channelPrefix + "remove"
+	channelDelete = channelPrefix + "delete"
 
 	exists = "BUSYGROUP Consumer Group name already exists"
 )
@@ -88,7 +83,25 @@ func (es *eventStream) Subscribe(ctx context.Context, stream string) error {
 					break
 				}
 
-				err = es.svc.CreateThing(ctx, cte.id, cte.serverUri, cte.nodeID)
+				err = es.svc.CreateThing(ctx, cte.id, cte.channelID, cte.serverUri, cte.nodeID)
+
+			case thingDelete:
+				dte, e := decodeDeleteThing(event)
+				if e != nil {
+					err = e
+					break
+				}
+
+				err = es.svc.DeleteThing(ctx, dte.id)
+
+			case channelDelete:
+				cde, e := decodeDeleteChannel(event)
+				if e != nil {
+					err = e
+					break
+				}
+
+				err = es.svc.DeleteChannel(ctx, cde.id)
 			}
 			if err != nil && err != errMetadataType {
 				fmt.Println("Failed to handle event sourcing: ", err.Error())
@@ -97,47 +110,4 @@ func (es *eventStream) Subscribe(ctx context.Context, stream string) error {
 			es.client.XAck(ctx, stream, group, msg.ID)
 		}
 	}
-}
-
-func decodeCreateThing(event map[string]interface{}) (createThingEvent, error) {
-	var thingMetadata, channelMetadata map[string]interface{}
-
-	thmeta := read(event, "thing_metadata", "{}")
-
-	if err := json.Unmarshal([]byte(thmeta), &thingMetadata); err != nil {
-		return createThingEvent{}, err
-	}
-
-	chmeta := read(event, "channel_metadata", "{}")
-
-	if err := json.Unmarshal([]byte(chmeta), &channelMetadata); err != nil {
-		return createThingEvent{}, err
-	}
-
-	cte := createThingEvent{
-		id:   read(event, "id", ""),
-		name: read(event, "name", ""),
-	}
-
-	NodeID, ok := thingMetadata[keyNodeID].(string)
-	if !ok {
-		return createThingEvent{}, errMetadataNodeID
-	}
-
-	ServerURI, ok := channelMetadata[keyServerURI].(string)
-	if !ok {
-		return createThingEvent{}, errMetadataServerURI
-	}
-
-	cte.nodeID = NodeID
-	cte.serverUri = ServerURI
-	return cte, nil
-}
-
-func read(event map[string]interface{}, key, def string) string {
-	val, ok := event[key].(string)
-	if !ok {
-		return def
-	}
-	return val
 }

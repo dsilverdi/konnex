@@ -21,13 +21,19 @@ type Service interface {
 	Browse(context.Context, string, string, string) ([]BrowsedNode, error)
 
 	// Connect to OPCUA Server
-	CreateThing(ctx context.Context, ThingsID, ServerURI, NodeID string) error
+	CreateThing(ctx context.Context, ThingsID, ChannelID, ServerURI, NodeID string) error
 
 	// Subscribe From DB
 	SubscribeWithDB(context.Context) error
 
 	// Monitor OPC UA Data
 	Monitor(context.Context, string) ([]MonitorData, error)
+
+	// Delete Thing
+	DeleteThing(context.Context, string) error
+
+	// Delete Channel
+	DeleteChannel(context.Context, string) error
 }
 
 type Config struct {
@@ -75,7 +81,7 @@ func (svc opcuaService) Browse(ctx context.Context, serveruri, namespace, identi
 	return nodes, nil
 }
 
-func (svc opcuaService) CreateThing(ctx context.Context, ThingsID, ServerURI, NodeID string) error {
+func (svc opcuaService) CreateThing(ctx context.Context, ThingsID, ChannelID, ServerURI, NodeID string) error {
 	fmt.Println("Got IoT Data Called From Redis | ", []string{ServerURI, NodeID})
 
 	svc.Config.ServerURI = ServerURI
@@ -89,6 +95,7 @@ func (svc opcuaService) CreateThing(ctx context.Context, ThingsID, ServerURI, No
 
 	NewNode := &Node{
 		ID:        ThingsID,
+		ChannelID: ChannelID,
 		ServerUri: ServerURI,
 		NodeID:    NodeID,
 	}
@@ -160,4 +167,12 @@ func (svc opcuaService) Monitor(ctx context.Context, id string) ([]MonitorData, 
 	}
 
 	return datas, nil
+}
+
+func (svc opcuaService) DeleteThing(ctx context.Context, id string) error {
+	return svc.NodeRepo.Delete(ctx, id, "thing")
+}
+
+func (svc opcuaService) DeleteChannel(ctx context.Context, id string) error {
+	return svc.NodeRepo.Delete(ctx, id, "channel")
 }

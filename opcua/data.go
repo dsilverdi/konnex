@@ -7,6 +7,7 @@ import (
 
 type Node struct {
 	ID        string
+	ChannelID string
 	ServerUri string
 	NodeID    string
 }
@@ -22,7 +23,7 @@ type NodeRepository interface {
 	Save(context.Context, *Node) error
 	ReadAll(context.Context) ([]Node, error)
 	ReadbyID(context.Context, string) (*Node, error)
-	Delete(context.Context, string) error
+	Delete(context.Context, string, string) error
 }
 
 type NodeDataRepository interface {

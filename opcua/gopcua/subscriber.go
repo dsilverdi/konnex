@@ -99,21 +99,30 @@ func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config, id string) erro
 
 func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, interval, lag time.Duration, wg *sync.WaitGroup, id string, nodes ...string) {
 	fmt.Println("SUBS TO | ", nodes)
-	sub, err := m.Subscribe(
+	// sub, err := m.Subscribe(
+	// 	ctx,
+	// 	&opcuapkg.SubscriptionParameters{
+	// 		Interval: interval,
+	// 	},
+	// 	func(s *monitor.Subscription, msg *monitor.DataChangeMessage) {
+	// 		if msg.Error != nil {
+	// 			log.Printf("[callback] error=%s", msg.Error)
+	// 		} else {
+	// 			log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
+	// 		}
+	// 		time.Sleep(lag)
+	// 	},
+	// 	nodes...)
+
+	ch := make(chan *monitor.DataChangeMessage, 16)
+	sub, err := m.ChanSubscribe(
 		ctx,
 		&opcuapkg.SubscriptionParameters{
 			Interval: interval,
 		},
-		func(s *monitor.Subscription, msg *monitor.DataChangeMessage) {
-			if msg.Error != nil {
-				log.Printf("[callback] error=%s", msg.Error)
-			} else {
-				// log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
-				cl.saveData(ctx, msg, id)
-			}
-			time.Sleep(lag)
-		},
-		nodes...)
+		ch,
+		nodes...,
+	)
 
 	if err != nil {
 		fmt.Print("error di sini startcallback")
@@ -122,7 +131,26 @@ func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, 
 
 	defer cl.cleanup(sub, wg)
 
-	<-ctx.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-ch:
+			if msg.Error != nil {
+				log.Printf("[callback] error=%s", msg.Error)
+			} else {
+				log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
+				err := cl.saveData(ctx, msg, id)
+				if err != nil {
+					fmt.Println("Error Harus DItutup ", err)
+					return
+				}
+			}
+			time.Sleep(lag)
+		}
+	}
+
+	//<-ctx.Done()
 }
 
 func (cl *Client) cleanup(sub *monitor.Subscription, wg *sync.WaitGroup) {
@@ -131,7 +159,7 @@ func (cl *Client) cleanup(sub *monitor.Subscription, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (cl *Client) saveData(ctx context.Context, msg *monitor.DataChangeMessage, id string) {
+func (cl *Client) saveData(ctx context.Context, msg *monitor.DataChangeMessage, id string) error {
 	NewNodeData := &opcua.NodeData{
 		Time:    time.Now(),
 		ThingID: id,
@@ -163,6 +191,9 @@ func (cl *Client) saveData(ctx context.Context, msg *monitor.DataChangeMessage, 
 
 	err := cl.nodeData.Save(ctx, NewNodeData)
 	if err != nil {
-		log.Printf("Error Save to DB | %s", err.Error())
+		// log.Printf("Error Save to DB | %s", err.Error())
+		return err
 	}
+
+	return nil
 }

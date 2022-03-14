@@ -38,6 +38,7 @@ func (es *EventStream) CreateThings(ctx context.Context, t things.Things, token 
 
 	event := createThingEvent{
 		id:              th.ID,
+		channelID:       th.ChannelID,
 		owner:           th.Owner,
 		name:            th.Name,
 		thingMetadata:   th.MetaData,
@@ -69,7 +70,27 @@ func (es *EventStream) GetSpecificThing(ctx context.Context, id, token string) (
 }
 
 func (es *EventStream) DeleteThing(ctx context.Context, id, token string) error {
-	return es.svc.DeleteThing(ctx, id, token)
+	err := es.svc.DeleteThing(ctx, id, token)
+	if err != nil {
+		return err
+	}
+
+	event := deleteThingEvent{
+		id: id,
+	}
+
+	record := &redis.XAddArgs{
+		Stream:       streamID,
+		MaxLenApprox: streamLen,
+		Values:       event.Encode(),
+	}
+
+	err = es.client.XAdd(ctx, record).Err()
+	if err != nil {
+		fmt.Println("REDIS ERROR | ", err)
+	}
+
+	return nil
 }
 
 // Channel Services
@@ -86,5 +107,25 @@ func (es *EventStream) GetSpecificChannel(ctx context.Context, id, token string)
 }
 
 func (es *EventStream) DeleteChannel(ctx context.Context, id, token string) error {
-	return es.svc.DeleteChannel(ctx, id, token)
+	err := es.svc.DeleteChannel(ctx, id, token)
+	if err != nil {
+		return err
+	}
+
+	event := deleteChannelEvent{
+		id: id,
+	}
+
+	record := &redis.XAddArgs{
+		Stream:       streamID,
+		MaxLenApprox: streamLen,
+		Values:       event.Encode(),
+	}
+
+	err = es.client.XAdd(ctx, record).Err()
+	if err != nil {
+		fmt.Println("REDIS ERROR | ", err)
+	}
+
+	return nil
 }

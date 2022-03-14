@@ -43,6 +43,7 @@ func execTable(ctx context.Context, conn *pgxpool.Pool) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS node (
 			id VARCHAR(255) PRIMARY KEY,
+			channel_id VARCHAR(255),
 			server_uri VARCHAR(255),
 			node_id VARCHAR(255)
 		);`,
@@ -51,7 +52,7 @@ func execTable(ctx context.Context, conn *pgxpool.Pool) error {
 			thing_id VARCHAR(255),
 			data VARCHAR(255),
 			data_type VARCHAR(255),
-			FOREIGN KEY (thing_id) REFERENCES node (id)
+			FOREIGN KEY (thing_id) REFERENCES node (id) ON DELETE CASCADE
 			);
 			SELECT create_hypertable('node_data', 'time', if_not_exists => TRUE)`,
 	}
