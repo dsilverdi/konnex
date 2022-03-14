@@ -90,7 +90,7 @@ func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config, id string) erro
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
-	go cl.startCallbackSub(ctx, mon, time.Second, time.Millisecond*500, wg, id, cfg.NodeID)
+	go cl.startCallbackSub(ctx, mon, time.Second*5, time.Millisecond*500, wg, id, cfg.NodeID)
 
 	<-ctx.Done()
 	wg.Wait()
@@ -99,30 +99,35 @@ func (cl *Client) Subscribe(_ context.Context, cfg opcua.Config, id string) erro
 
 func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, interval, lag time.Duration, wg *sync.WaitGroup, id string, nodes ...string) {
 	fmt.Println("SUBS TO | ", nodes)
-	// sub, err := m.Subscribe(
-	// 	ctx,
-	// 	&opcuapkg.SubscriptionParameters{
-	// 		Interval: interval,
-	// 	},
-	// 	func(s *monitor.Subscription, msg *monitor.DataChangeMessage) {
-	// 		if msg.Error != nil {
-	// 			log.Printf("[callback] error=%s", msg.Error)
-	// 		} else {
-	// 			log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
-	// 		}
-	// 		time.Sleep(lag)
-	// 	},
-	// 	nodes...)
-
-	ch := make(chan *monitor.DataChangeMessage, 16)
-	sub, err := m.ChanSubscribe(
+	ch := make(chan bool)
+	sub, err := m.Subscribe(
 		ctx,
 		&opcuapkg.SubscriptionParameters{
 			Interval: interval,
 		},
-		ch,
-		nodes...,
-	)
+		func(s *monitor.Subscription, msg *monitor.DataChangeMessage) {
+			if msg.Error != nil {
+				log.Printf("[callback] error=%s", msg.Error)
+			} else {
+				err := cl.saveData(ctx, msg, id)
+				if err != nil {
+					log.Printf("[callback] Error Harus Ditutup %s", err)
+					ch <- true
+				}
+			}
+			time.Sleep(lag)
+		},
+		nodes...)
+
+	// ch := make(chan *monitor.DataChangeMessage, 16)
+	// sub, err := m.ChanSubscribe(
+	// 	ctx,
+	// 	&opcuapkg.SubscriptionParameters{
+	// 		Interval: interval,
+	// 	},
+	// 	ch,
+	// 	nodes...,
+	// )
 
 	if err != nil {
 		fmt.Print("error di sini startcallback")
@@ -135,22 +140,31 @@ func (cl *Client) startCallbackSub(ctx context.Context, m *monitor.NodeMonitor, 
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-ch:
-			if msg.Error != nil {
-				log.Printf("[callback] error=%s", msg.Error)
-			} else {
-				log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
-				err := cl.saveData(ctx, msg, id)
-				if err != nil {
-					fmt.Println("Error Harus DItutup ", err)
-					return
-				}
+		case check := <-ch:
+			if check {
+				return
 			}
-			time.Sleep(lag)
 		}
 	}
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		return
+	// 	case msg := <-ch:
+	// 		if msg.Error != nil {
+	// 			log.Printf("[callback] error=%s", msg.Error)
+	// 		} else {
+	// 			log.Printf("[callback] node=%s value=%v", msg.NodeID, msg.Value.Value())
+	// 			err := cl.saveData(ctx, msg, id)
+	// 			if err != nil {
+	// 				fmt.Println("Error Harus DItutup ", err)
+	// 				returnerr := cl.saveData(ctx, msg, id)
+	// 		}
+	// 		// time.Sleep(lag)
+	// 	}
+	// }
 
-	//<-ctx.Done()
+	// <-ctx.Done()
 }
 
 func (cl *Client) cleanup(sub *monitor.Subscription, wg *sync.WaitGroup) {
