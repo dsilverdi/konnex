@@ -29,7 +29,7 @@ func MakeHTTPHandler(svc opcua.Service, logger log.Logger) http.Handler {
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(logger)),
 	}
 
-	r.Methods("GET").Path("/browse").Handler(httptransport.NewServer(
+	r.Methods("POST").Path("/browse").Handler(httptransport.NewServer(
 		e.BrowseEndpoint,
 		decodeBrowseRequest,
 		rest.EncodeResponse,
